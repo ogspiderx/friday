@@ -1,0 +1,31 @@
+# environment / secrets
+.env
+.env.*
+*.key
+*.pem
+secrets/
+config/secrets*
+groq_api_complete.json
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+
+# logs and runtime state
+logs/
+state.json
+memory/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# test artifacts (optional depending on project)
+pytest_cache/
+.coverage
+tests/

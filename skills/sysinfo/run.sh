@@ -1,0 +1,21 @@
+#!/bin/bash
+# System Info Skill — collects and displays system information
+
+echo "═══════════════════════════════════════"
+echo "  SYSTEM INFORMATION"
+echo "═══════════════════════════════════════"
+echo ""
+echo "  Hostname:    $(hostname)"
+echo "  User:        $(whoami)"
+echo "  OS:          $(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d '"' || uname -o)"
+echo "  Kernel:      $(uname -r)"
+echo "  Arch:        $(uname -m)"
+echo "  Uptime:      $(uptime -p 2>/dev/null || uptime)"
+echo "  Shell:       $SHELL"
+echo ""
+echo "  CPU:         $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo 'N/A')"
+echo "  Cores:       $(nproc 2>/dev/null || echo 'N/A')"
+echo "  Memory:      $(free -h 2>/dev/null | awk '/Mem:/ {print $3 "/" $2 " used"}' || echo 'N/A')"
+echo "  Disk:        $(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " used (" $5 ")"}' || echo 'N/A')"
+echo ""
+echo "═══════════════════════════════════════"
