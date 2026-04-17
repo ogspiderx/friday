@@ -1,6 +1,5 @@
 # environment / secrets
 .env
-.env.*
 *.key
 *.pem
 secrets/
@@ -18,7 +17,6 @@ venv/
 # logs and runtime state
 logs/
 state.json
-memory/
 
 # IDE / OS
 .vscode/
