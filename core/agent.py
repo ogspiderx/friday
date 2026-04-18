@@ -27,6 +27,8 @@ from core.reflection import ReflectionEngine
 from core.trace import get_trace
 from config.settings import get_settings
 
+import os
+import json
 import logging
 
 logger = logging.getLogger("friday.agent")
@@ -84,8 +86,8 @@ class FridayAgent:
         # ── Step 2: Classify intent ───────────────────────────────────
         intent_info = classify_intent(user_input)
         tracer.set_intent(intent_info)
-        intent = intent_info.get("intent", "chat")
-        logger.info(f"Intent: {intent} (confidence: {intent_info.get('confidence', 0):.2f})")
+        intent_name = intent_info.get("intent", "chat")
+        logger.info(f"Intent: {intent_name} (confidence: {intent_info.get('confidence', 0):.2f})")
 
         self._show_intent(intent_info)
 
@@ -100,14 +102,14 @@ class FridayAgent:
 
         # ── Step 4: Handle by intent type ─────────────────────────────
 
-        if intent["intent"] == "chat":
+        if intent_name == "chat":
             response = self._handle_chat(user_input, memory_context)
 
-        elif intent["intent"] == "memory_query":
+        elif intent_name == "memory_query":
             response = self._handle_memory_query(user_input)
 
-        elif intent["intent"] in ("shell_task", "skill_task"):
-            response = self._handle_task(user_input, intent, memory_context)
+        elif intent_name in ("shell_task", "skill_task"):
+            response = self._handle_task(user_input, intent_info, memory_context)
 
         else:
             response = self._handle_chat(user_input, memory_context)
@@ -115,7 +117,7 @@ class FridayAgent:
         # ── Step 5: Store response in memory ──────────────────────────
         # Inject commands run into metadata for reflection
         meta = {"commands_executed": getattr(self, "_temp_commands_run", [])}
-        self.session.add("assistant", response, intent=intent["intent"], metadata=meta)
+        self.session.add("assistant", response, intent=intent_name, metadata=meta)
         self.state.record_command(user_input)
         
         # Reset local tracker
