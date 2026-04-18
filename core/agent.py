@@ -33,7 +33,7 @@ from core.ui import console
 
 logger = logging.getLogger("friday.agent")
 
-_MAX_SHELL_ATTEMPTS = 5
+_MAX_SHELL_ATTEMPTS = 3
 
 
 class FridayAgent:
@@ -179,7 +179,7 @@ class FridayAgent:
                 console.print(f"  [friday.ok]Skill:[/friday.ok] {matched_skill.name}")
                 console.print(f"  [friday.dim]{matched_skill.description}[/friday.dim]")
             elif not self.verbose:
-                console.print("[friday.dim]One moment—using a saved skill…[/friday.dim]")
+                console.print("[friday.dim]…[/friday.dim]")
 
             if matched_skill.has_runner:
                 result = execute_skill(matched_skill)
@@ -220,15 +220,18 @@ class FridayAgent:
         persona_bundle: str,
     ) -> str:
         if not self.verbose:
-            console.print("[friday.dim]Friday is working on that…[/friday.dim]")
+            console.print("[friday.dim]…[/friday.dim]")
 
         feedback = ""
         last_combined = ""
         plan_cog = cognitive_load
+        seen_plans: set[str] = set()
+        attempt = 0
 
-        for attempt in range(1, _MAX_SHELL_ATTEMPTS + 1):
-            alternate = attempt == _MAX_SHELL_ATTEMPTS
-            if attempt >= 3:
+        while attempt < _MAX_SHELL_ATTEMPTS:
+            attempt += 1
+            alternate = attempt >= _MAX_SHELL_ATTEMPTS
+            if attempt >= 2:
                 plan_cog = "high"
 
             plan = create_plan(
@@ -247,8 +250,17 @@ class FridayAgent:
             if self.verbose:
                 self._show_plan(plan)
 
+            sig = self._plan_signature(plan)
+            if sig in seen_plans:
+                feedback = (
+                    "That exact command sequence was already tried. "
+                    "Use a different tool, path, or order (no repeated pkill/killall)."
+                )
+                continue
+            seen_plans.add(sig)
+
             if plan["type"] == "chat":
-                if attempt < _MAX_SHELL_ATTEMPTS and intent.get("intent") in ("shell_task", "skill_task"):
+                if intent.get("intent") in ("shell_task", "skill_task") and attempt < _MAX_SHELL_ATTEMPTS:
                     feedback = "User needed actionable shell output; avoid pure chat."
                     continue
                 return self._handle_chat(user_input, memory_context, plan_cog, persona_bundle)
@@ -276,11 +288,17 @@ class FridayAgent:
                 console.print()
                 return response
 
-            feedback = fb or combined or "Unknown failure; try a different command sequence."
+            if "cancelled" in (combined or "").lower() or "cancelled" in (fb or "").lower():
+                feedback = (
+                    "The run was cancelled or blocked. Do not loop the same command; "
+                    "either ask how the user wants to proceed or use a different approach."
+                )
+            else:
+                feedback = fb or combined or "Unknown failure; try a different command sequence."
 
         response = generate_task_response(
             user_input,
-            "I hit a wall after several tries and need to hand this back to you.",
+            "I could not finish that after a few different approaches—want to try narrower steps?",
             last_combined,
             memory_context,
             "high",
@@ -290,6 +308,16 @@ class FridayAgent:
         console.print(Markdown(response))
         console.print()
         return response
+
+    def _plan_signature(self, plan: dict) -> str:
+        parts: list[str] = []
+        for s in plan.get("steps") or []:
+            c = s.get("command")
+            if c is not None:
+                parts.append(json.dumps(c, sort_keys=True) if isinstance(c, dict) else str(c))
+        if parts:
+            return "|".join(parts)
+        return json.dumps(plan, sort_keys=True, default=str)[:800]
 
     def _friendly_plan_summary(self, plan: dict) -> str:
         steps = plan.get("steps") or []

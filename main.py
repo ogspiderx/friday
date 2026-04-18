@@ -40,6 +40,7 @@ BUILTIN_COMMANDS = {
     "clear": "Clear the screen",
     "help": "Built-in commands",
     "reload": "Reload skills from disk",
+    "find-skill": "Show npx command for Vercel find-skills (Cursor IDE)",
 }
 
 
@@ -97,6 +98,13 @@ def handle_builtin(command: str, agent: FridayAgent) -> bool:
     if cmd == "reload":
         n = agent.reload_skills()
         console.print(f"  [friday.ok]Reloaded {n} skill(s).[/friday.ok]")
+        return True
+
+    if cmd in ("find-skill", "find-skills"):
+        console.print(
+            "  [friday.dim]Cursor IDE (run in a normal terminal outside Friday):[/friday.dim]\n"
+            "  [friday.info]npx skills add https://github.com/vercel-labs/skills --skill find-skills[/friday.info]"
+        )
         return True
 
     return False

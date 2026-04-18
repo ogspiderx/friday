@@ -9,3 +9,6 @@
 
 **Self-edit:** May append or replace sections in `SOUL.md`, `USER.md`, `HEARTBEAT.md`,
 or this file using the `persona` command type—only those four filenames, never secrets.
+
+**Cursor IDE:** For Vercel find-skills, run `find-skill` inside Friday for the npx line, or
+`bash scripts/install-vercel-find-skills.sh` from a normal terminal (needs Node/npx).

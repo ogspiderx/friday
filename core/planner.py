@@ -13,6 +13,7 @@ Always prefers skills over raw shell commands.
 import json
 from groq import Groq
 from config.settings import get_settings
+from core.groq_compat import chat_completion_create
 
 PLANNER_SYSTEM_PROMPT = """You are the planning engine for Friday, a local CLI copilot.
 
@@ -28,6 +29,10 @@ Rules:
 7. Persona self-updates: to change long-lived preferences, you may add a step with
    {"type":"persona","action":"write"|"append","params":{"file":"SOUL.md"|"USER.md"|"AGENT.md"|"HEARTBEAT.md","content":"..."}}.
    Only those four filenames. No secrets or API keys.
+8. NEVER run interactive terminal programs (nano, vim, vi, less, emacs). Use filesystem read_file / create_file or printf/sed instead.
+9. NEVER wrap commands in `bash -c` / `bash -lc` / `sh -c`. Use argv-style system commands only (e.g. find, rg, cat).
+10. To locate files by name, use `find` with structured args (e.g. find, HOME path, -name, pattern). Do not invent container or MCP tools.
+11. If a previous API or tool error mentioned "tool" or "invalid_request", switch to plain argv shell only—no pseudo tools.
 
 Respond with ONLY valid JSON:
 {
@@ -111,17 +116,21 @@ def create_plan(
     user_message = "\n".join(context_parts)
 
     try:
-        response = client.chat.completions.create(
-            model=settings.get_model("plan", cognitive_load),
-            messages=[
-                {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.2,
-            max_completion_tokens=500,
-            response_format={"type": "json_object"},
-        )
-        
+        pm = settings.get_model("plan", cognitive_load)
+
+        def _plan_kwargs(mid: str):
+            return {
+                "messages": [
+                    {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message},
+                ],
+                "temperature": 0.2,
+                "max_completion_tokens": 500,
+                "response_format": {"type": "json_object"},
+            }
+
+        response = chat_completion_create(client, primary_model=pm, builder=_plan_kwargs)
+
         from core.budget import get_tracker
         get_tracker().record_usage(response.usage)
 
@@ -198,20 +207,28 @@ def generate_chat_response(
     messages.append({"role": "user", "content": user_query})
 
     try:
-        response = client.chat.completions.create(
-            model=settings.get_model("chat", cognitive_load),
-            messages=messages,
-            temperature=0.7,
-            max_completion_tokens=1024,
-        )
-        
+        pm = settings.get_model("chat", cognitive_load)
+
+        def _chat_kwargs(mid: str):
+            return {
+                "messages": messages,
+                "temperature": 0.7,
+                "max_completion_tokens": 1024,
+            }
+
+        response = chat_completion_create(client, primary_model=pm, builder=_chat_kwargs)
+
         from core.budget import get_tracker
         get_tracker().record_usage(response.usage)
-        
+
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        return f"[error] Failed to generate response: {e}"
+        return (
+            "I hit a brief glitch talking to the model, so here is the short version: "
+            "ask again in a moment, or turn off anything that forces special model tools. "
+            f"(detail: {e})"
+        )
 
 
 def generate_task_response(
@@ -272,17 +289,24 @@ def generate_task_response(
     messages.append({"role": "user", "content": prompt})
 
     try:
-        response = client.chat.completions.create(
-            model=settings.get_model("chat", cognitive_load),
-            messages=messages,
-            temperature=0.5,
-            max_completion_tokens=1024,
-        )
-        
+        pm = settings.get_model("chat", cognitive_load)
+
+        def _task_chat_kwargs(mid: str):
+            return {
+                "messages": messages,
+                "temperature": 0.5,
+                "max_completion_tokens": 1024,
+            }
+
+        response = chat_completion_create(client, primary_model=pm, builder=_task_chat_kwargs)
+
         from core.budget import get_tracker
         get_tracker().record_usage(response.usage)
-        
+
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        return f"[error] Failed to generate task response: {e}"
+        return (
+            "I could not polish the answer through the model just now, but the run already finished—"
+            f"check the output above if shown. ({e})"
+        )

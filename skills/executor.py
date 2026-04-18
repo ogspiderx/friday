@@ -67,10 +67,10 @@ def execute_skill(skill: Skill, args: list[str] | None = None, cwd: str | None =
     # Confirmation for risky skills
     if validation["requires_confirmation"]:
         risk = validation["risk"]
-        emoji, color = policy.get_risk_display(risk)
-        console.print(f"  {emoji} Skill [bold]{skill.name}[/bold] classified as [{color}]{risk}[/{color}]")
+        _, color = policy.get_risk_display(risk)
+        console.print(f"  [{color}]{risk}[/] skill [bold]{skill.name}[/bold]")
         try:
-            confirm = console.input("[bold yellow]  Execute skill? (y/n): [/bold yellow]").strip().lower()
+            confirm = console.input("[friday.warn]  ok? (y/n): [/friday.warn]").strip().lower()
         except (EOFError, KeyboardInterrupt):
             confirm = "n"
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from groq import Groq
 from config.settings import get_settings
 from core.ui import console
+from core.groq_compat import chat_completion_create
 
 GENERATOR_SYSTEM_PROMPT = """You are the skill evolution engine for Friday.
 You take an Objective and a sequence of successful Bash Commands and mint a reusable Skill.
@@ -49,16 +50,20 @@ class SkillGenerator:
 
         try:
             console.print(f"  [dim]🔨 Minting new skill for: {objective[:40]}...[/dim]")
-            response = self.client.chat.completions.create(
-                model=self._settings.get_model("generate", "high"),
-                messages=[
-                    {"role": "system", "content": GENERATOR_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,
-                max_completion_tokens=800,
-                response_format={"type": "json_object"},
-            )
+            pm = self._settings.get_model("generate", "high")
+
+            def _gen_kw(mid: str):
+                return {
+                    "messages": [
+                        {"role": "system", "content": GENERATOR_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.2,
+                    "max_completion_tokens": 800,
+                    "response_format": {"type": "json_object"},
+                }
+
+            response = chat_completion_create(self.client, primary_model=pm, builder=_gen_kw)
 
             from core.budget import get_tracker
             get_tracker().record_usage(response.usage)

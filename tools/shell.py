@@ -14,7 +14,6 @@ from typing import Sequence
 
 from safety.policy import SafetyPolicy
 from core.ui import console
-from rich.panel import Panel
 
 
 class ShellExecutor:
@@ -66,19 +65,13 @@ class ShellExecutor:
             }
 
         risk = validation["risk"]
-        emoji, color = self._policy.get_risk_display(risk)
+        _, color = self._policy.get_risk_display(risk)
 
         if validation["requires_confirmation"] and not skip_confirm:
-            console.print(
-                Panel(
-                    f"[bold]{cmd_line}[/bold]",
-                    title=f"{emoji} [{color}]{risk.upper()} RISK[/{color}]",
-                    border_style=color,
-                )
-            )
+            console.print(f"  [{color}]{risk}[/]: {cmd_line}")
             console.print(f"  [friday.dim]{validation['reason']}[/friday.dim]")
             try:
-                confirm = console.input("[friday.warn]  Run this? (y/n): [/friday.warn]").strip().lower()
+                confirm = console.input("[friday.warn]  ok? (y/n): [/friday.warn]").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 confirm = "n"
             if confirm not in ("y", "yes"):
@@ -165,19 +158,13 @@ class ShellExecutor:
             }
 
         risk = validation["risk"]
-        emoji, color = self._policy.get_risk_display(risk)
+        _, color = self._policy.get_risk_display(risk)
 
         if validation["requires_confirmation"] and not skip_confirm:
-            console.print(
-                Panel(
-                    f"[bold]{command}[/bold]",
-                    title=f"{emoji} [{color}]{risk.upper()} RISK[/{color}]",
-                    border_style=color,
-                )
-            )
+            console.print(f"  [{color}]{risk}[/]: {command}")
             console.print(f"  [friday.dim]{validation['reason']}[/friday.dim]")
             try:
-                confirm = console.input("[friday.warn]  Run this? (y/n): [/friday.warn]").strip().lower()
+                confirm = console.input("[friday.warn]  ok? (y/n): [/friday.warn]").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 confirm = "n"
             if confirm not in ("y", "yes"):

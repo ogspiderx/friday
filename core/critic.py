@@ -9,6 +9,7 @@ recommends retries.
 import json
 from groq import Groq
 from config.settings import get_settings
+from core.groq_compat import chat_completion_create
 import logging
 
 logger = logging.getLogger("friday.critic")
@@ -56,16 +57,20 @@ class CriticVerifier:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self._settings.get_model("reason", cognitive_load),
-                messages=[
-                    {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.1,
-                max_completion_tokens=200,
-                response_format={"type": "json_object"},
-            )
+            pm = self._settings.get_model("reason", cognitive_load)
+
+            def _crit_kw(mid: str):
+                return {
+                    "messages": [
+                        {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.1,
+                    "max_completion_tokens": 200,
+                    "response_format": {"type": "json_object"},
+                }
+
+            response = chat_completion_create(self.client, primary_model=pm, builder=_crit_kw)
             
             from core.budget import get_tracker
             get_tracker().record_usage(response.usage)

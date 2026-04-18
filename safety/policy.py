@@ -25,7 +25,7 @@ DANGEROUS_PATTERNS = [
     r"`[^`]+`",  # backtick subshells (simple heuristic)
     r"\bcurl\b.*\|\s*(bash|sh|zsh|fish)",  # pipe to shell
     r"\bwget\b.*\|\s*(bash|sh|zsh|fish)",
-    r"\b(bash|sh|zsh|fish)\s+-c\s+",
+    r"\b(bash|sh|zsh|fish)\s+-\w*c\b",  # -c, -lc, etc.
     r"\bsudo\b",
     r"\brm\s+(-[a-zA-Z]*f|-[a-zA-Z]*r|--force|--recursive)",
     r"\brm\s+-rf\b",
@@ -107,6 +107,18 @@ class SafetyPolicy:
 
         return "safe"
 
+    def _trust_mode_adjust(self, command: str, result: dict) -> dict:
+        """When safe_mode is OFF, skip prompts except for sudo."""
+        if self._state.safe_mode:
+            return result
+        if not result.get("requires_confirmation"):
+            return result
+        if re.search(r"\bsudo\b", command, re.IGNORECASE):
+            return result
+        out = dict(result)
+        out["requires_confirmation"] = False
+        return out
+
     def validate_command(self, command: str) -> dict:
         """
         Full validation pipeline for a command.
@@ -128,7 +140,20 @@ class SafetyPolicy:
                 "reason": "Empty command.",
                 "requires_confirmation": False,
             }
-            
+
+        if re.search(
+            r"\b(nano|vim|emacs|less|more)\b",
+            command,
+            re.IGNORECASE,
+        ) or re.search(r"\bvi\s+\S", command, re.IGNORECASE):
+            return {
+                "allowed": False,
+                "risk": "medium",
+                "reason": "Interactive terminal programs (nano, vim, less, …) cannot run in this agent. "
+                "Use structured read/write or a non-interactive command.",
+                "requires_confirmation": False,
+            }
+
         # Hard length cap to prevent obfuscated payload injections
         if len(command) > 4000:
             return {
@@ -145,21 +170,27 @@ class SafetyPolicy:
         workspace_violation = self._check_workspace_restriction(command)
         if workspace_violation and self._state.mode != "build":
             # BUILD mode turns workspace violations into warnings rather than hard blocks
-            return {
-                "allowed": False,
-                "risk": "dangerous",
-                "reason": workspace_violation,
-                "requires_confirmation": False,
-            }
-            
+            return self._trust_mode_adjust(
+                command,
+                {
+                    "allowed": False,
+                    "risk": "dangerous",
+                    "reason": workspace_violation,
+                    "requires_confirmation": False,
+                },
+            )
+
         traversal_violation = self._check_path_traversal(command)
         if traversal_violation and self._state.mode != "build":
-             return {
-                "allowed": False,
-                "risk": "dangerous",
-                "reason": traversal_violation,
-                "requires_confirmation": False,
-            }
+            return self._trust_mode_adjust(
+                command,
+                {
+                    "allowed": False,
+                    "risk": "dangerous",
+                    "reason": traversal_violation,
+                    "requires_confirmation": False,
+                },
+            )
 
         # Determine behavior based on risk + operational mode
         # mode: "safe", "auto", "build"
@@ -171,32 +202,41 @@ class SafetyPolicy:
             else:
                  risk_str = "Dangerous command detected."
                  
-            return {
-                "allowed": True,
-                "risk": risk,
-                "reason": f"{risk_str} Requires user confirmation.",
-                "requires_confirmation": True, # Dangerous ALWAYS requires confirmation in all modes for MVP
-            }
-            
+            return self._trust_mode_adjust(
+                command,
+                {
+                    "allowed": True,
+                    "risk": risk,
+                    "reason": f"{risk_str} Requires user confirmation.",
+                    "requires_confirmation": True,
+                },
+            )
+
         elif risk == "medium":
-            req_confirm = True # Default safe
+            req_confirm = True  # Default safe
             if current_mode in ("auto", "build"):
-                req_confirm = False # Medium slides through under Auto or Build
-                
-            return {
-                "allowed": True,
-                "risk": risk,
-                "reason": "Medium-risk command. Proceeding with caution.",
-                "requires_confirmation": req_confirm,
-            }
-            
+                req_confirm = False  # Medium slides through under Auto or Build
+
+            return self._trust_mode_adjust(
+                command,
+                {
+                    "allowed": True,
+                    "risk": risk,
+                    "reason": "Medium-risk command. Proceeding with caution.",
+                    "requires_confirmation": req_confirm,
+                },
+            )
+
         else:
-            return {
-                "allowed": True,
-                "risk": risk,
-                "reason": "Command appears safe.",
-                "requires_confirmation": False,
-            }
+            return self._trust_mode_adjust(
+                command,
+                {
+                    "allowed": True,
+                    "risk": risk,
+                    "reason": "Command appears safe.",
+                    "requires_confirmation": False,
+                },
+            )
 
     def _check_workspace_restriction(self, command: str) -> str | None:
         """

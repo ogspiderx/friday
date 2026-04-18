@@ -15,6 +15,7 @@ import re
 
 from groq import Groq
 from config.settings import get_settings
+from core.groq_compat import chat_completion_create
 
 def _is_present_time_or_date_question(text: str) -> bool:
     """True when the user is asking for now's time/day/date (not recall of past chat)."""
@@ -106,16 +107,20 @@ def classify_intent(user_input: str) -> dict:
     client = Groq(api_key=settings.groq_api_key)
 
     try:
-        response = client.chat.completions.create(
-            model=settings.get_model("route"),
-            messages=[
-                {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-                {"role": "user", "content": user_input},
-            ],
-            temperature=0.1,
-            max_completion_tokens=150,
-            response_format={"type": "json_object"},
-        )
+        pm = settings.get_model("route")
+
+        def _route_kw(mid: str):
+            return {
+                "messages": [
+                    {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_input},
+                ],
+                "temperature": 0.1,
+                "max_completion_tokens": 150,
+                "response_format": {"type": "json_object"},
+            }
+
+        response = chat_completion_create(client, primary_model=pm, builder=_route_kw)
         
         from core.budget import get_tracker
         get_tracker().record_usage(response.usage)
