@@ -11,16 +11,72 @@ Uses the fast model for speed. Returns structured JSON.
 """
 
 import json
+import re
+
 from groq import Groq
 from config.settings import get_settings
+
+def _is_present_time_or_date_question(text: str) -> bool:
+    """True when the user is asking for now's time/day/date (not recall of past chat)."""
+    s = text.lower().strip()
+    if not s:
+        return False
+    phrases = (
+        r"what\s+is\s+the\s+time",
+        r"what'?s\s+the\s+time",
+        r"what\s+time\s+is\s+it",
+        r"time\s*rn\b",
+        r"current\s+time",
+        r"what\s+is\s+the\s+day",
+        r"what\s+day\s+is\s+it",
+        r"what'?s\s+the\s+day",
+        r"what\s+is\s+the\s+date",
+        r"what\s+date\s+is\s+it",
+        r"what'?s\s+the\s+date",
+        r"today'?s?\s+date",
+        r"current\s+date",
+    )
+    for p in phrases:
+        if re.search(p, s):
+            return True
+    m = re.search(r"\bwhat\s+time\b", s)
+    if m:
+        rest = s[m.end() :].lstrip()
+        if not rest.startswith(
+            ("did ", "does ", "do ", "was ", "were ", "have ", "had ", "will ", "would ", "should ")
+        ):
+            return True
+    m = re.search(r"\bwhat\s+day\b", s)
+    if m:
+        rest = s[m.end() :].lstrip()
+        if not rest.startswith(("did ", "was ", "were ", "have ", "had ")):
+            return True
+    return False
+
+
+def _override_false_memory_query(user_input: str, result: dict) -> dict:
+    """
+    Present-moment clock/calendar questions must not use memory_query
+    (that path only searches stored snippets and confuses users).
+    """
+    if result.get("intent") != "memory_query":
+        return result
+    if not _is_present_time_or_date_question(user_input):
+        return result
+    out = dict(result)
+    out["intent"] = "shell_task"
+    out["cognitive_load"] = "high"
+    out["confidence"] = max(float(out.get("confidence", 0.7)), 0.85)
+    return out
+
 
 ROUTER_SYSTEM_PROMPT = """You are an intent classifier for a CLI copilot named Friday.
 
 Classify the user's input into exactly ONE of these intents:
-- "chat" — casual conversation, greetings, questions about yourself, opinions
-- "shell_task" — user wants to run a shell command, manage files, install packages, system operations
-- "skill_task" — user wants to perform a structured task (e.g. git operations, project scaffolding, code analysis)
-- "memory_query" — user is asking about something from a previous conversation or past context
+- "chat" — casual conversation, greetings, opinions, general questions that do NOT ask to recall prior chat
+- "shell_task" — run something on the machine: files, packages, processes, OR factual readouts (disk, time via `date`, network ping, etc.)
+- "skill_task" — structured project/dev workflows (git, builds, scaffolding) when a repeatable skill fits
+- "memory_query" — ONLY when the user explicitly wants prior conversation recalled (e.g. "what did I say about…", "remind me what we…", "last time you…", "did I already tell you…"). NEVER use memory_query for the current time, today's date, weather, math, or generic trivia.
 
 Also set cognitive_load for downstream model selection (NOT the same as intent):
 - "low" — trivial, social, or very short prompts where mistakes are low-stakes
@@ -57,7 +113,7 @@ def classify_intent(user_input: str) -> dict:
                 {"role": "user", "content": user_input},
             ],
             temperature=0.1,
-            max_completion_tokens=100,
+            max_completion_tokens=150,
             response_format={"type": "json_object"},
         )
         
@@ -84,6 +140,8 @@ def classify_intent(user_input: str) -> dict:
         valid_intents = {"chat", "shell_task", "skill_task", "memory_query"}
         if result["intent"] not in valid_intents:
             result["intent"] = "chat"
+
+        result = _override_false_memory_query(user_input, result)
 
         return result
 
