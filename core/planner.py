@@ -6,7 +6,7 @@ Takes user query + intent and produces a structured plan:
   - steps: ordered list of actions
   - requires_shell: whether shell access is needed
 
-Uses the strong model for complex reasoning.
+Model tier is chosen from the Groq catalog + per-turn cognitive_load (router).
 Always prefers skills over raw shell commands.
 """
 
@@ -22,8 +22,9 @@ Rules:
 1. ALWAYS prefer using a skill if one could handle the task.
 2. If using the shell, you MUST output a STRUCTURED command object, NOT a raw shell string.
 3. Keep plans SHORT — 1 to 3 steps maximum.
-4. For chat intent, just produce a conversational response plan.
-5. NEVER suggest dangerous commands (rm -rf /, sudo rm, etc.) without flagging them.
+4. If the user asks for factual information (time, disk space, files), generate a "shell" plan to find the answer, EVEN IF the intent was classified as "chat". 
+5. Only output a "chat" plan for casual conversation, greetings, or opinions where no system information is required.
+6. NEVER suggest dangerous commands (rm -rf /, sudo rm, etc.) without flagging them.
 
 Respond with ONLY valid JSON:
 {
@@ -48,7 +49,12 @@ Respond with ONLY valid JSON:
 }"""
 
 
-def create_plan(user_query: str, intent: dict, memory_context: str = "") -> dict:
+def create_plan(
+    user_query: str,
+    intent: dict,
+    memory_context: str = "",
+    cognitive_load: str = "medium",
+) -> dict:
     """
     Generate an execution plan from user query and classified intent.
     
@@ -67,7 +73,10 @@ def create_plan(user_query: str, intent: dict, memory_context: str = "") -> dict
 
     # Build the user message with context
     context_parts = [f"User query: {user_query}"]
-    context_parts.append(f"Classified intent: {intent['intent']} (confidence: {intent['confidence']})")
+    context_parts.append(
+        f"Classified intent: {intent['intent']} (confidence: {intent['confidence']}, "
+        f"cognitive_load: {cognitive_load})"
+    )
     
     env_info = EnvironmentContext.get_info()
     context_parts.append(f"Environment:\n{env_info}")
@@ -79,7 +88,7 @@ def create_plan(user_query: str, intent: dict, memory_context: str = "") -> dict
 
     try:
         response = client.chat.completions.create(
-            model=settings.get_model("plan"),
+            model=settings.get_model("plan", cognitive_load),
             messages=[
                 {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
                 {"role": "user", "content": user_message},
@@ -116,7 +125,11 @@ def create_plan(user_query: str, intent: dict, memory_context: str = "") -> dict
         }
 
 
-def generate_chat_response(user_query: str, memory_context: str = "") -> str:
+def generate_chat_response(
+    user_query: str,
+    memory_context: str = "",
+    cognitive_load: str = "medium",
+) -> str:
     """
     Generate a conversational response for chat-type intents.
     
@@ -134,7 +147,11 @@ def generate_chat_response(user_query: str, memory_context: str = "") -> str:
         "You are FRIDAY, a sharp, capable AI assistant running as a local CLI agent. "
         "You are helpful, concise, and slightly witty. You have access to the user's "
         "shell and filesystem. Keep responses brief and actionable unless the user "
-        "wants a longer conversation."
+        "wants a longer conversation. "
+        "When \"Environment Status\" includes machine-local facts (current time, OS, cwd), "
+        "treat that block as authoritative for this session. Never fabricate terminal output "
+        "or pretend a command ran unless it appears in the conversation. If the user needs "
+        "a fact that is not in Environment Status, say you can run a shell command to fetch it."
     )
 
     messages = [{"role": "system", "content": system_msg}]
@@ -144,12 +161,19 @@ def generate_chat_response(user_query: str, memory_context: str = "") -> str:
             "role": "system",
             "content": f"Relevant context from memory: {memory_context}"
         })
+        
+    from core.context import EnvironmentContext
+    env_info = EnvironmentContext.get_info()
+    messages.append({
+        "role": "system",
+        "content": f"Environment Status:\n{env_info}"
+    })
     
     messages.append({"role": "user", "content": user_query})
 
     try:
         response = client.chat.completions.create(
-            model=settings.get_model("chat"),
+            model=settings.get_model("chat", cognitive_load),
             messages=messages,
             temperature=0.7,
             max_completion_tokens=1024,
@@ -164,7 +188,13 @@ def generate_chat_response(user_query: str, memory_context: str = "") -> str:
         return f"[error] Failed to generate response: {e}"
 
 
-def generate_task_response(user_query: str, task_context: str, execution_logs: str, memory_context: str = "") -> str:
+def generate_task_response(
+    user_query: str,
+    task_context: str,
+    execution_logs: str,
+    memory_context: str = "",
+    cognitive_load: str = "medium",
+) -> str:
     """
     Generate a conversational response after executing a task (shell or skill).
     
@@ -195,6 +225,13 @@ def generate_task_response(user_query: str, task_context: str, execution_logs: s
             "role": "system",
             "content": f"Relevant context from memory: {memory_context}"
         })
+
+    from core.context import EnvironmentContext
+    env_info = EnvironmentContext.get_info()
+    messages.append({
+        "role": "system",
+        "content": f"Environment Status:\n{env_info}"
+    })
     
     prompt = (
         f"User query: {user_query}\n"
@@ -207,7 +244,7 @@ def generate_task_response(user_query: str, task_context: str, execution_logs: s
 
     try:
         response = client.chat.completions.create(
-            model=settings.get_model("chat"),
+            model=settings.get_model("chat", cognitive_load),
             messages=messages,
             temperature=0.5,
             max_completion_tokens=1024,

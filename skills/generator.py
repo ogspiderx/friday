@@ -52,7 +52,7 @@ class SkillGenerator:
         try:
             console.print(f"  [dim]🔨 Minting new skill for: {objective[:40]}...[/dim]")
             response = self.client.chat.completions.create(
-                model=self._settings.get_model("reason"),
+                model=self._settings.get_model("generate", "high"),
                 messages=[
                     {"role": "system", "content": GENERATOR_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},

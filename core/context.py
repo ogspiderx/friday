@@ -9,6 +9,7 @@ import os
 import platform
 import subprocess
 from pathlib import Path
+from datetime import datetime
 
 class EnvironmentContext:
     @staticmethod
@@ -16,7 +17,9 @@ class EnvironmentContext:
         """Returns a formatted string describing the environment."""
         parts = []
 
-        # OS and Arch
+        # Target time + environment info
+        current_time = datetime.now().astimezone().strftime("%A, %Y-%m-%d %H:%M:%S %Z")
+        parts.append(f"Current System Time: {current_time}")
         parts.append(f"OS: {platform.system()} {platform.release()} ({platform.machine()})")
         parts.append(f"CWD: {os.getcwd()}")
 

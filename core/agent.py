@@ -87,7 +87,13 @@ class FridayAgent:
         intent_info = classify_intent(user_input)
         tracer.set_intent(intent_info)
         intent_name = intent_info.get("intent", "chat")
-        logger.info(f"Intent: {intent_name} (confidence: {intent_info.get('confidence', 0):.2f})")
+        cognitive_load = intent_info.get("cognitive_load", "medium")
+        if cognitive_load not in ("low", "medium", "high"):
+            cognitive_load = "medium"
+        logger.info(
+            f"Intent: {intent_name} (confidence: {intent_info.get('confidence', 0):.2f}, "
+            f"cognitive_load={cognitive_load})"
+        )
 
         self._show_intent(intent_info)
 
@@ -103,16 +109,16 @@ class FridayAgent:
         # ── Step 4: Handle by intent type ─────────────────────────────
 
         if intent_name == "chat":
-            response = self._handle_chat(user_input, memory_context)
+            response = self._handle_chat(user_input, memory_context, cognitive_load)
 
         elif intent_name == "memory_query":
             response = self._handle_memory_query(user_input)
 
         elif intent_name in ("shell_task", "skill_task"):
-            response = self._handle_task(user_input, intent_info, memory_context)
+            response = self._handle_task(user_input, intent_info, memory_context, cognitive_load)
 
         else:
-            response = self._handle_chat(user_input, memory_context)
+            response = self._handle_chat(user_input, memory_context, cognitive_load)
 
         # ── Step 5: Store response in memory ──────────────────────────
         # Inject commands run into metadata for reflection
@@ -133,9 +139,9 @@ class FridayAgent:
         logger.info(f"Response: {response[:200]}")
         return response
 
-    def _handle_chat(self, user_input: str, memory_context: str) -> str:
+    def _handle_chat(self, user_input: str, memory_context: str, cognitive_load: str = "medium") -> str:
         """Handle conversational chat intent."""
-        response = generate_chat_response(user_input, memory_context)
+        response = generate_chat_response(user_input, memory_context, cognitive_load)
         console.print()
         console.print(Markdown(response))
         console.print()
@@ -168,7 +174,13 @@ class FridayAgent:
         console.print()
         return output
 
-    def _handle_task(self, user_input: str, intent: dict, memory_context: str) -> str:
+    def _handle_task(
+        self,
+        user_input: str,
+        intent: dict,
+        memory_context: str,
+        cognitive_load: str = "medium",
+    ) -> str:
         """Handle shell_task and skill_task intents."""
 
         # ── Step A: Try skill match first (ALWAYS) ────────────────────
@@ -191,7 +203,13 @@ class FridayAgent:
                         tags=[matched_skill.name],
                     )
 
-                response = generate_task_response(user_input, f"Executed skill: {matched_skill.name}", output, memory_context)
+                response = generate_task_response(
+                    user_input,
+                    f"Executed skill: {matched_skill.name}",
+                    output,
+                    memory_context,
+                    cognitive_load,
+                )
                 console.print()
                 console.print(Markdown(response))
                 console.print()
@@ -200,7 +218,7 @@ class FridayAgent:
                 console.print(f"  [yellow]Skill '{matched_skill.name}' has no runner (run.sh)[/yellow]")
 
         # ── Step B: Generate plan via LLM ─────────────────────────────
-        plan = create_plan(user_input, intent, memory_context)
+        plan = create_plan(user_input, intent, memory_context, cognitive_load)
         get_trace().set_plan(plan)
         logger.info(f"Plan: type={plan['type']}, steps={len(plan.get('steps', []))}")
 
@@ -208,21 +226,27 @@ class FridayAgent:
 
         # ── Step C: Execute plan ──────────────────────────────────────
         if plan["type"] == "chat":
-            return self._handle_chat(user_input, memory_context)
+            return self._handle_chat(user_input, memory_context, cognitive_load)
 
         if plan["type"] == "shell" or plan.get("requires_shell"):
-            shell_output = self._execute_shell_plan(plan, user_input)
+            shell_output = self._execute_shell_plan(plan, user_input, cognitive_load)
             plan_str = json.dumps(plan, indent=2)
-            response = generate_task_response(user_input, f"Executed shell plan:\n{plan_str}", shell_output, memory_context)
+            response = generate_task_response(
+                user_input,
+                f"Executed shell plan:\n{plan_str}",
+                shell_output,
+                memory_context,
+                cognitive_load,
+            )
             console.print()
             console.print(Markdown(response))
             console.print()
             return response
 
         # Fallback to chat
-        return self._handle_chat(user_input, memory_context)
+        return self._handle_chat(user_input, memory_context, cognitive_load)
 
-    def _execute_shell_plan(self, plan: dict, user_input: str) -> str:
+    def _execute_shell_plan(self, plan: dict, user_input: str, cognitive_load: str = "medium") -> str:
         """Execute shell commands from a plan."""
         outputs = []
         if not hasattr(self, "_temp_commands_run"):
@@ -268,7 +292,7 @@ class FridayAgent:
                 }
             else:
                 # Post-execution LLM Critic Verification Fallback
-                evaluation = self.critic.verify(user_input, cmd_repr, result)
+                evaluation = self.critic.verify(user_input, cmd_repr, result, cognitive_load)
             
             get_trace().add_evaluation(evaluation)
             if evaluation["status"] == "failure":
@@ -338,9 +362,11 @@ class FridayAgent:
         bar_len = int(conf * 20)
         bar = "█" * bar_len + "░" * (20 - bar_len)
 
+        cl = intent.get("cognitive_load", "medium")
         console.print(
             f"  [dim]intent:[/dim] [{color}]{intent_name}[/{color}] "
-            f"[dim]{bar} {conf:.0%}[/dim]"
+            f"[dim]{bar} {conf:.0%}[/dim]  "
+            f"[dim]load:[/dim] {cl}"
         )
 
     def _show_plan(self, plan: dict):

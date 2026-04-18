@@ -35,7 +35,7 @@ class CriticVerifier:
         self._settings = get_settings()
         self.client = Groq(api_key=self._settings.groq_api_key)
 
-    def verify(self, goal: str, command: str, result: dict) -> dict:
+    def verify(self, goal: str, command: str, result: dict, cognitive_load: str = "medium") -> dict:
         """
         Verify if an executed command achieved the goal.
         
@@ -57,7 +57,7 @@ class CriticVerifier:
 
         try:
             response = self.client.chat.completions.create(
-                model=self._settings.get_model("reason"),
+                model=self._settings.get_model("reason", cognitive_load),
                 messages=[
                     {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},

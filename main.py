@@ -147,7 +147,11 @@ def main():
         
         settings = get_settings()
         console.print(f"  [green]✓[/green] Agent ready")
-        console.print(f"  [green]✓[/green] Models: [dim]fast={settings.model_router.fast_model} · strong={settings.model_router.strong_model}[/dim]")
+        mr = settings.model_router
+        console.print(
+            f"  [green]✓[/green] Models: [dim]fast={mr.fast_model} · strong={mr.strong_model} · "
+            f"reason={mr.reason_model} · reason_deep={mr.reason_deep_model}[/dim]"
+        )
         
         from skills.loader import load_skills
         skill_count = len(load_skills())
