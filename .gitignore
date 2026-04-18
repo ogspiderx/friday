@@ -4,7 +4,6 @@
 *.pem
 secrets/
 config/secrets*
-groq_api_complete.json
 
 # python
 __pycache__/

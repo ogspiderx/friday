@@ -5,14 +5,14 @@ Handles argument passing, working directory setup, and output capture.
 Integrates with the safety policy for validation.
 """
 
-import subprocess
 import os
+import shlex
+import subprocess
 from pathlib import Path
+
 from skills.loader import Skill
 from safety.policy import SafetyPolicy
-from rich.console import Console
-
-console = Console()
+from core.ui import console
 policy = SafetyPolicy()
 
 
@@ -51,7 +51,7 @@ def execute_skill(skill: Skill, args: list[str] | None = None, cwd: str | None =
     if args:
         cmd_parts.extend(args)
 
-    command_str = " ".join(cmd_parts)
+    command_str = shlex.join(cmd_parts)
 
     # Validate through safety policy
     validation = policy.validate_command(command_str)

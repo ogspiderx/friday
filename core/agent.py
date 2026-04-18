@@ -1,16 +1,18 @@
 """
-core/agent.py — The FRIDAY agent orchestrator.
+core/agent.py — Friday agent orchestrator.
 
-This is the brain. It wires together:
-    Router → Planner → Skill Matcher → Shell Executor → Memory
-
-Every user input flows through this pipeline.
+Router → Planner → Skills → Shell (with bounded retries) → Memory
 """
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
+from __future__ import annotations
+
+import json
+import logging
+import os
+from typing import Any
+
 from rich.markdown import Markdown
+from rich.panel import Panel
 
 from core.router import classify_intent
 from core.planner import create_plan, generate_chat_response, generate_task_response
@@ -26,31 +28,24 @@ from core.verifier import DeterministicVerifier
 from core.reflection import ReflectionEngine
 from core.trace import get_trace
 from config.settings import get_settings
-
-import os
-import json
-import logging
+from core.persona import read_persona_bundle
+from core.ui import console
 
 logger = logging.getLogger("friday.agent")
-console = Console()
+
+_MAX_SHELL_ATTEMPTS = 5
 
 
 class FridayAgent:
-    """
-    The core FRIDAY agent.
-    
-    Pipeline per turn:
-        1. Classify intent (router)
-        2. Retrieve relevant memory
-        3. Check for matching skill
-        4. Generate execution plan
-        5. Execute plan (skill or shell)
-        6. Store results in memory
-        7. Return output to user
-    """
+    """Core Friday agent."""
 
-    def __init__(self):
+    def __init__(self, verbose: bool = False):
         self._settings = get_settings()
+        self.verbose = bool(verbose) or os.environ.get("FRIDAY_VERBOSE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         self.state = AgentState()
         self.session = SessionMemory()
         self.mempalace = MemPalaceClient()
@@ -61,116 +56,110 @@ class FridayAgent:
         self._skills = load_skills()
 
         logger.info(
-            f"FRIDAY initialized | skills={len(self._skills)} | "
-            f"memories={self.mempalace.count} | safe_mode={self.state.safe_mode}"
+            "Friday initialized | skills=%s | memories=%s | safe_mode=%s | verbose=%s",
+            len(self._skills),
+            self.mempalace.count,
+            self.state.safe_mode,
+            self.verbose,
         )
 
     def process(self, user_input: str) -> str:
-        """
-        Process a single user input through the full pipeline.
-        
-        Args:
-            user_input: Raw text from the user.
-        
-        Returns:
-            Response string to display.
-        """
         tracer = get_trace()
         tracer.clear()
         tracer.set_input(user_input)
-        
-        # ── Step 1: Store user input in session memory ────────────────
-        self.session.add("user", user_input)
-        logger.info(f"Input: {user_input}")
 
-        # ── Step 2: Classify intent ───────────────────────────────────
+        self.session.add("user", user_input)
+        logger.info("Input: %s", user_input)
+
         intent_info = classify_intent(user_input)
         tracer.set_intent(intent_info)
         intent_name = intent_info.get("intent", "chat")
         cognitive_load = intent_info.get("cognitive_load", "medium")
         if cognitive_load not in ("low", "medium", "high"):
             cognitive_load = "medium"
+
         logger.info(
-            f"Intent: {intent_name} (confidence: {intent_info.get('confidence', 0):.2f}, "
-            f"cognitive_load={cognitive_load})"
+            "Intent: %s confidence=%s cognitive_load=%s",
+            intent_name,
+            intent_info.get("confidence", 0),
+            cognitive_load,
         )
 
-        self._show_intent(intent_info)
+        if self.verbose:
+            self._show_intent(intent_info)
 
-        # ── Step 3: Retrieve memory context ───────────────────────────
+        persona_bundle = read_persona_bundle()
+
         session_context = self.session.get_context_string(n=3)
         longterm_context = self.mempalace.recall_context_string(user_input)
         memory_context = ""
         if longterm_context:
             memory_context = f"Long-term: {longterm_context}"
         if session_context:
-            memory_context += f"\nSession: {session_context}" if memory_context else f"Session: {session_context}"
-
-        # ── Step 4: Handle by intent type ─────────────────────────────
+            memory_context += (
+                f"\nSession: {session_context}" if memory_context else f"Session: {session_context}"
+            )
 
         if intent_name == "chat":
-            response = self._handle_chat(user_input, memory_context, cognitive_load)
-
+            response = self._handle_chat(user_input, memory_context, cognitive_load, persona_bundle)
         elif intent_name == "memory_query":
             response = self._handle_memory_query(user_input)
-
         elif intent_name in ("shell_task", "skill_task"):
-            response = self._handle_task(user_input, intent_info, memory_context, cognitive_load)
-
+            response = self._handle_task(
+                user_input, intent_info, memory_context, cognitive_load, persona_bundle
+            )
         else:
-            response = self._handle_chat(user_input, memory_context, cognitive_load)
+            response = self._handle_chat(user_input, memory_context, cognitive_load, persona_bundle)
 
-        # ── Step 5: Store response in memory ──────────────────────────
-        # Inject commands run into metadata for reflection
         meta = {"commands_executed": getattr(self, "_temp_commands_run", [])}
         self.session.add("assistant", response, intent=intent_name, metadata=meta)
         self.state.record_command(user_input)
-        
-        # Reset local tracker
         self._temp_commands_run = []
 
-        # ── Step 6: Post-Process Reflection ───────────────────────────
         if intent_info["intent"] in ("shell_task", "skill_task"):
             self.reflection.analyze_turn(self.session)
-            # Re-sync skills in case generator minted one
             self.reload_skills()
 
         tracer.commit()
-        logger.info(f"Response: {response[:200]}")
+        logger.info("Response: %s", response[:200])
         return response
 
-    def _handle_chat(self, user_input: str, memory_context: str, cognitive_load: str = "medium") -> str:
-        """Handle conversational chat intent."""
-        response = generate_chat_response(user_input, memory_context, cognitive_load)
+    def _handle_chat(
+        self,
+        user_input: str,
+        memory_context: str,
+        cognitive_load: str,
+        persona_bundle: str,
+    ) -> str:
+        response = generate_chat_response(
+            user_input, memory_context, cognitive_load, persona_context=persona_bundle
+        )
         console.print()
         console.print(Markdown(response))
         console.print()
         return response
 
     def _handle_memory_query(self, user_input: str) -> str:
-        """Handle memory recall queries."""
-        # Search both session and long-term memory
         session_results = self.session.search(user_input)
         longterm_results = self.mempalace.recall(user_input)
-
-        parts = []
+        parts: list[str] = []
 
         if longterm_results:
-            parts.append("[bold cyan]Long-term memories:[/bold cyan]")
+            parts.append("[friday.accent]Long-term[/friday.accent]")
             for mem in longterm_results:
-                parts.append(f"  [{mem['type']}] {mem['content']}")
+                parts.append(f"  · [{mem['type']}] {mem['content']}")
 
         if session_results:
-            parts.append("[bold cyan]Session memories:[/bold cyan]")
+            parts.append("[friday.accent]This session[/friday.accent]")
             for entry in session_results:
-                parts.append(f"  [{entry.role}] {entry.content[:150]}")
+                parts.append(f"  · [{entry.role}] {entry.content[:150]}")
 
         if not parts:
-            parts.append("[dim]No relevant memories found.[/dim]")
+            parts.append("[friday.dim]Nothing matched that recall.[/friday.dim]")
 
         output = "\n".join(parts)
         console.print()
-        console.print(Panel(output, title="🧠 Memory Recall", border_style="cyan"))
+        console.print(Panel(output, title="Memory", border_style="friday.accent", padding=(0, 1)))
         console.print()
         return output
 
@@ -179,23 +168,23 @@ class FridayAgent:
         user_input: str,
         intent: dict,
         memory_context: str,
-        cognitive_load: str = "medium",
+        cognitive_load: str,
+        persona_bundle: str,
     ) -> str:
-        """Handle shell_task and skill_task intents."""
-
-        # ── Step A: Try skill match first (ALWAYS) ────────────────────
         matched_skill = match_skill(user_input, self._skills)
 
         if matched_skill:
-            logger.info(f"Skill matched: {matched_skill.name}")
-            console.print(f"  [bold green]⚡ Skill matched:[/bold green] {matched_skill.name}")
-            console.print(f"  [dim]{matched_skill.description}[/dim]")
+            logger.info("Skill matched: %s", matched_skill.name)
+            if self.verbose:
+                console.print(f"  [friday.ok]Skill:[/friday.ok] {matched_skill.name}")
+                console.print(f"  [friday.dim]{matched_skill.description}[/friday.dim]")
+            elif not self.verbose:
+                console.print("[friday.dim]One moment—using a saved skill…[/friday.dim]")
 
             if matched_skill.has_runner:
                 result = execute_skill(matched_skill)
-                output = self._format_execution_result(result)
+                output = self._format_execution_result(result, quiet=not self.verbose)
 
-                # Store successful outcomes in long-term memory
                 if result["executed"] and result["exit_code"] == 0:
                     self.mempalace.store(
                         f"Ran skill '{matched_skill.name}' for: {user_input[:100]}",
@@ -205,195 +194,266 @@ class FridayAgent:
 
                 response = generate_task_response(
                     user_input,
-                    f"Executed skill: {matched_skill.name}",
+                    f"Ran the “{matched_skill.name}” skill you already had.",
                     output,
                     memory_context,
                     cognitive_load,
+                    persona_context=persona_bundle,
                 )
                 console.print()
                 console.print(Markdown(response))
                 console.print()
                 return response
-            else:
-                console.print(f"  [yellow]Skill '{matched_skill.name}' has no runner (run.sh)[/yellow]")
+            if self.verbose:
+                console.print(f"  [friday.warn]Skill '{matched_skill.name}' has no runner.[/friday.warn]")
 
-        # ── Step B: Generate plan via LLM ─────────────────────────────
-        plan = create_plan(user_input, intent, memory_context, cognitive_load)
-        get_trace().set_plan(plan)
-        logger.info(f"Plan: type={plan['type']}, steps={len(plan.get('steps', []))}")
+        return self._autonomous_shell_loop(
+            user_input, intent, memory_context, cognitive_load, persona_bundle
+        )
 
-        self._show_plan(plan)
+    def _autonomous_shell_loop(
+        self,
+        user_input: str,
+        intent: dict,
+        memory_context: str,
+        cognitive_load: str,
+        persona_bundle: str,
+    ) -> str:
+        if not self.verbose:
+            console.print("[friday.dim]Friday is working on that…[/friday.dim]")
 
-        # ── Step C: Execute plan ──────────────────────────────────────
-        if plan["type"] == "chat":
-            return self._handle_chat(user_input, memory_context, cognitive_load)
+        feedback = ""
+        last_combined = ""
+        plan_cog = cognitive_load
 
-        if plan["type"] == "shell" or plan.get("requires_shell"):
-            shell_output = self._execute_shell_plan(plan, user_input, cognitive_load)
-            plan_str = json.dumps(plan, indent=2)
-            response = generate_task_response(
+        for attempt in range(1, _MAX_SHELL_ATTEMPTS + 1):
+            alternate = attempt == _MAX_SHELL_ATTEMPTS
+            if attempt >= 3:
+                plan_cog = "high"
+
+            plan = create_plan(
                 user_input,
-                f"Executed shell plan:\n{plan_str}",
-                shell_output,
+                intent,
                 memory_context,
-                cognitive_load,
+                plan_cog,
+                retry_context=feedback,
+                attempt=attempt,
+                alternate_strategy=alternate,
+                persona_context=persona_bundle,
             )
-            console.print()
-            console.print(Markdown(response))
-            console.print()
-            return response
+            get_trace().set_plan(plan)
+            logger.info("Plan attempt %s type=%s steps=%s", attempt, plan["type"], len(plan.get("steps", [])))
 
-        # Fallback to chat
-        return self._handle_chat(user_input, memory_context, cognitive_load)
+            if self.verbose:
+                self._show_plan(plan)
 
-    def _execute_shell_plan(self, plan: dict, user_input: str, cognitive_load: str = "medium") -> str:
-        """Execute shell commands from a plan."""
-        outputs = []
+            if plan["type"] == "chat":
+                if attempt < _MAX_SHELL_ATTEMPTS and intent.get("intent") in ("shell_task", "skill_task"):
+                    feedback = "User needed actionable shell output; avoid pure chat."
+                    continue
+                return self._handle_chat(user_input, memory_context, plan_cog, persona_bundle)
+
+            if plan["type"] != "shell" and not plan.get("requires_shell"):
+                feedback = "Emit a concrete shell plan with argv-style commands."
+                continue
+
+            ok, combined, fb = self._execute_shell_plan(
+                plan, user_input, plan_cog, quiet=not self.verbose
+            )
+            last_combined = combined
+            if ok:
+                summary = self._friendly_plan_summary(plan)
+                response = generate_task_response(
+                    user_input,
+                    summary,
+                    combined,
+                    memory_context,
+                    plan_cog,
+                    persona_context=persona_bundle,
+                )
+                console.print()
+                console.print(Markdown(response))
+                console.print()
+                return response
+
+            feedback = fb or combined or "Unknown failure; try a different command sequence."
+
+        response = generate_task_response(
+            user_input,
+            "I hit a wall after several tries and need to hand this back to you.",
+            last_combined,
+            memory_context,
+            "high",
+            persona_context=persona_bundle,
+        )
+        console.print()
+        console.print(Markdown(response))
+        console.print()
+        return response
+
+    def _friendly_plan_summary(self, plan: dict) -> str:
+        steps = plan.get("steps") or []
+        bits: list[str] = []
+        for s in steps[:5]:
+            a = (s.get("action") or "").strip()
+            if a:
+                bits.append(a)
+        if not bits:
+            return "Ran the steps we planned on your machine."
+        return "Here is what I did: " + " · ".join(bits)
+
+    def _execute_shell_plan(
+        self,
+        plan: dict,
+        user_input: str,
+        cognitive_load: str,
+        *,
+        quiet: bool,
+    ) -> tuple[bool, str, str]:
+        outputs: list[str] = []
         if not hasattr(self, "_temp_commands_run"):
             self._temp_commands_run = []
+
+        failure_feedback = ""
 
         for step in plan.get("steps", []):
             command_obj = step.get("command")
             if not command_obj:
                 continue
 
-            # Generate a printable representation of the command
             if isinstance(command_obj, dict):
                 cmd_repr = json.dumps(command_obj)
             else:
                 cmd_repr = str(command_obj)
-                
-            console.print(f"  [bold]$[/bold] [cyan]{cmd_repr}[/cyan]")
+
+            if self.verbose:
+                console.print(f"  [bold]$[/bold] [friday.info]{cmd_repr}[/friday.info]")
             self._temp_commands_run.append(cmd_repr)
 
-            # Route through the Executor Router
             if isinstance(command_obj, dict):
                 result = self.router.execute(command_obj, default_cwd=os.getcwd())
             else:
-                # Fallback if planner hallucinates raw string
                 result = self.router.shell.execute(str(command_obj))
-                
+
             get_trace().add_execution(result)
-            output = self._format_execution_result(result)
+            output = self._format_execution_result(result, quiet=quiet)
             outputs.append(output)
-            
-            # Phase 11: Fast Deterministic Verification
-            det_eval = {"success": False, "confidence": 0.0, "reason": ""}
+
+            det_eval: dict[str, Any] = {"success": False, "confidence": 0.0, "reason": ""}
             if isinstance(command_obj, dict):
-                det_eval = self.deterministic_verifier.verify(command_obj, result, default_cwd=os.getcwd())
-                
-            evaluation = None
+                det_eval = self.deterministic_verifier.verify(
+                    command_obj, result, default_cwd=os.getcwd()
+                )
+
             if det_eval["confidence"] >= 0.9:
-                console.print(f"  [dim]Deterministic Verifier (conf:{det_eval['confidence']}):[/dim] ✓" if det_eval["success"] else f"  [dim]Deterministic Verifier:[/dim] ✗")
                 evaluation = {
                     "status": "success" if det_eval["success"] else "failure",
                     "retry_recommended": not det_eval["success"],
-                    "feedback": det_eval["reason"]
+                    "feedback": det_eval["reason"],
                 }
             else:
-                # Post-execution LLM Critic Verification Fallback
                 evaluation = self.critic.verify(user_input, cmd_repr, result, cognitive_load)
-            
-            get_trace().add_evaluation(evaluation)
-            if evaluation["status"] == "failure":
-                console.print(f"  [yellow]Verifier Flagged Issue:[/yellow] {evaluation['feedback']}")
-                if evaluation["retry_recommended"]:
-                    console.print("  [dim]Retry recommended. (Not strictly re-planning yet to prevent loops)[/dim]")
-            else:
-                console.print(f"  [green]Verified:[/green] {evaluation.get('feedback', 'Success.')}\n")
 
-            # Store successful outcomes
-            if result["executed"] and result["exit_code"] == 0:
+            get_trace().add_evaluation(evaluation)
+
+            if self.verbose:
+                if evaluation["status"] == "failure":
+                    console.print(f"  [friday.warn]Check:[/friday.warn] {evaluation['feedback']}")
+                else:
+                    console.print(f"  [friday.ok]Looks good —[/friday.ok] {evaluation.get('feedback', '')}")
+
+            exit_code = result.get("exit_code", -1)
+            executed = result.get("executed")
+
+            if executed and exit_code != 0:
+                failure_feedback = result.get("stderr") or f"exit {exit_code}"
+                return False, "\n".join(outputs), failure_feedback
+
+            if evaluation["status"] == "failure":
+                failure_feedback = evaluation.get("feedback") or "Verifier flagged this step."
+                return False, "\n".join(outputs), failure_feedback
+
+            if executed and exit_code == 0:
                 self.mempalace.store(
                     f"Executed: {cmd_repr} | Result: {result['stdout'][:150]}",
                     memory_type="outcome",
                     tags=["shell"],
                 )
 
-            # Stop on failure
-            if result.get("exit_code", -1) != 0 and result.get("executed"):
-                console.print("[red]  Step failed. Stopping plan execution.[/red]")
-                break
+        text = "\n".join(outputs) if outputs else "[No commands to execute]"
+        if not outputs:
+            return False, text, "Planner produced no runnable commands."
+        return True, text, ""
 
-        return "\n".join(outputs) if outputs else "[No commands to execute]"
-
-    def _format_execution_result(self, result: dict) -> str:
-        """Format a shell/skill execution result for display."""
-        parts = []
+    def _format_execution_result(self, result: dict, *, quiet: bool) -> str:
+        parts: list[str] = []
 
         if result.get("stdout"):
             stdout = result["stdout"].strip()
             if stdout:
-                console.print(Panel(stdout, border_style="green", title="output"))
+                if not quiet:
+                    console.print(Panel(stdout, border_style="friday.ok", title="output"))
                 parts.append(stdout)
 
         if result.get("stderr"):
             stderr = result["stderr"].strip()
             if stderr:
-                console.print(Panel(stderr, border_style="red", title="stderr"))
+                if not quiet:
+                    console.print(Panel(stderr, border_style="friday.err", title="stderr"))
                 parts.append(f"[stderr] {stderr}")
 
         if not result.get("executed"):
             msg = result.get("stderr", "Command was not executed.")
+            if not quiet and not parts:
+                console.print(f"  [friday.dim]{msg}[/friday.dim]")
             if not parts:
-                console.print(f"  [dim]{msg}[/dim]")
                 parts.append(msg)
 
         exit_code = result.get("exit_code", -1)
-        if result.get("executed"):
-            color = "green" if exit_code == 0 else "red"
-            console.print(f"  [dim]exit code: [{color}]{exit_code}[/{color}][/dim]")
+        if result.get("executed") and not quiet:
+            color = "friday.ok" if exit_code == 0 else "friday.err"
+            console.print(f"  [friday.dim]exit[/friday.dim] [{color}]{exit_code}[/{color}]")
 
         return "\n".join(parts)
 
-    def _show_intent(self, intent: dict):
-        """Display classified intent."""
+    def _show_intent(self, intent: dict) -> None:
         conf = intent["confidence"]
         intent_name = intent["intent"]
-
         color_map = {
-            "chat": "blue",
-            "shell_task": "yellow",
-            "skill_task": "green",
-            "memory_query": "cyan",
+            "chat": "friday.info",
+            "shell_task": "friday.warn",
+            "skill_task": "friday.ok",
+            "memory_query": "friday.accent",
         }
         color = color_map.get(intent_name, "white")
-
         bar_len = int(conf * 20)
         bar = "█" * bar_len + "░" * (20 - bar_len)
-
         cl = intent.get("cognitive_load", "medium")
         console.print(
-            f"  [dim]intent:[/dim] [{color}]{intent_name}[/{color}] "
-            f"[dim]{bar} {conf:.0%}[/dim]  "
-            f"[dim]load:[/dim] {cl}"
+            f"  [friday.dim]intent[/friday.dim] [{color}]{intent_name}[/{color}] "
+            f"[friday.dim]{bar} {conf:.0%}  load {cl}[/friday.dim]"
         )
 
-    def _show_plan(self, plan: dict):
-        """Display the execution plan."""
+    def _show_plan(self, plan: dict) -> None:
         if not plan.get("steps"):
             return
-
-        console.print(f"  [dim]plan:[/dim] [bold]{plan['type']}[/bold]", end="")
+        console.print(f"  [friday.dim]plan[/friday.dim] [bold]{plan['type']}[/bold]", end="")
         if plan.get("reasoning"):
-            console.print(f" [dim]— {plan['reasoning'][:80]}[/dim]")
+            console.print(f" [friday.dim]— {plan['reasoning'][:100]}[/friday.dim]")
         else:
             console.print()
-
         for i, step in enumerate(plan.get("steps", []), 1):
             action = step.get("action", "")
             cmd = step.get("command", "")
             skill = step.get("skill", "")
-
-            console.print(f"  [dim]{i}.[/dim] {action}", end="")
+            console.print(f"  [friday.dim]{i}.[/friday.dim] {action}", end="")
             if cmd:
-                console.print(f" [cyan]→ {cmd}[/cyan]", end="")
+                console.print(f" [friday.info]→ {cmd}[/friday.info]", end="")
             if skill:
-                console.print(f" [green]⚡ {skill}[/green]", end="")
+                console.print(f" [friday.ok]⚡ {skill}[/friday.ok]", end="")
             console.print()
 
-    def reload_skills(self):
-        """Reload skills from disk."""
+    def reload_skills(self) -> int:
         self._skills = load_skills()
-        logger.info(f"Skills reloaded: {len(self._skills)} found")
+        logger.info("Skills reloaded: %s", len(self._skills))
         return len(self._skills)

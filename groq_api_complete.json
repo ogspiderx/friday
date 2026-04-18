@@ -1,0 +1,1324 @@
+{
+  "meta": {
+    "source": "https://console.groq.com/docs",
+    "compiled": "2026-04-17",
+    "base_url": "https://api.groq.com/openai/v1"
+  },
+
+  "models": {
+    "production": [
+      {
+        "id": "llama-3.1-8b-instant",
+        "display_name": "Meta Llama 3.1 8B Instant",
+        "provider": "Meta",
+        "category": "production",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text",
+        "speed_tps": 560,
+        "context_window": 131072,
+        "max_completion_tokens": 131072,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.05",
+          "output_per_1m_tokens": "$0.08"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 14400,
+            "tpm": 6000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 250000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": true,
+            "built_in_tools": false
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "llama-3.3-70b-versatile",
+        "display_name": "Meta Llama 3.3 70B Versatile",
+        "provider": "Meta",
+        "category": "production",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text",
+        "speed_tps": 280,
+        "context_window": 131072,
+        "max_completion_tokens": 32768,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.59",
+          "output_per_1m_tokens": "$0.79"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 1000,
+            "tpm": 12000,
+            "tpd": 100000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 300000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": true,
+            "built_in_tools": false
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "openai/gpt-oss-120b",
+        "display_name": "OpenAI GPT-OSS 120B",
+        "provider": "OpenAI",
+        "category": "production",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text",
+        "speed_tps": 500,
+        "context_window": 131072,
+        "max_completion_tokens": 65536,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.15",
+          "output_per_1m_tokens": "$0.60"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 1000,
+            "tpm": 8000,
+            "tpd": 200000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 250000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": false,
+            "built_in_tools": true,
+            "built_in_tools_list": ["browser_search", "code_interpreter"]
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": {
+            "supported": true,
+            "reasoning_effort": ["low", "medium", "high"],
+            "include_reasoning_param": true,
+            "reasoning_format_param": false,
+            "note": "reasoning_format not supported; use include_reasoning instead. Reasoning content returned in response.choices[0].message.reasoning"
+          },
+          "vision": false,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "openai/gpt-oss-20b",
+        "display_name": "OpenAI GPT-OSS 20B",
+        "provider": "OpenAI",
+        "category": "production",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text",
+        "speed_tps": 1000,
+        "context_window": 131072,
+        "max_completion_tokens": 65536,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.075",
+          "output_per_1m_tokens": "$0.30"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 1000,
+            "tpm": 8000,
+            "tpd": 200000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 250000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": false,
+            "built_in_tools": true,
+            "built_in_tools_list": ["browser_search", "code_interpreter"]
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": {
+            "supported": true,
+            "reasoning_effort": ["low", "medium", "high"],
+            "include_reasoning_param": true,
+            "reasoning_format_param": false,
+            "note": "reasoning_format not supported; use include_reasoning instead. Reasoning content returned in response.choices[0].message.reasoning"
+          },
+          "vision": false,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "whisper-large-v3",
+        "display_name": "OpenAI Whisper Large V3",
+        "provider": "OpenAI",
+        "category": "production",
+        "modality": {
+          "input": ["audio"],
+          "output": ["text"]
+        },
+        "type": "speech-to-text",
+        "speed_tps": null,
+        "context_window": null,
+        "max_completion_tokens": null,
+        "max_file_size": "100 MB",
+        "pricing": {
+          "per_hour_audio": "$0.111"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 20,
+            "rpd": 2000,
+            "tpm": null,
+            "tpd": null,
+            "ash": 7200,
+            "asd": 28800
+          },
+          "developer_plan": {
+            "ash": 200000,
+            "rpm": 300
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false,
+          "flex_processing": false,
+          "transcription": true,
+          "translation": true
+        }
+      },
+      {
+        "id": "whisper-large-v3-turbo",
+        "display_name": "OpenAI Whisper Large V3 Turbo",
+        "provider": "OpenAI",
+        "category": "production",
+        "modality": {
+          "input": ["audio"],
+          "output": ["text"]
+        },
+        "type": "speech-to-text",
+        "speed_tps": null,
+        "context_window": null,
+        "max_completion_tokens": null,
+        "max_file_size": null,
+        "pricing": {
+          "per_hour_audio": "$0.04"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 20,
+            "rpd": 2000,
+            "tpm": null,
+            "tpd": null,
+            "ash": 7200,
+            "asd": 28800
+          },
+          "developer_plan": {
+            "ash": 400000,
+            "rpm": 400
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false,
+          "flex_processing": false,
+          "transcription": true,
+          "translation": true
+        }
+      }
+    ],
+
+    "production_systems": [
+      {
+        "id": "groq/compound",
+        "display_name": "Groq Compound",
+        "provider": "Groq",
+        "category": "production_system",
+        "description": "Agentic AI system powered by multiple open models. Autonomously uses built-in tools (web search, code execution) in a single API call.",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (agentic system)",
+        "speed_tps": 450,
+        "context_window": 131072,
+        "max_completion_tokens": 8192,
+        "max_file_size": null,
+        "pricing": {
+          "note": "Pricing passed through to underlying models and tools"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 250,
+            "tpm": 70000,
+            "tpd": null,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 200000,
+            "rpm": 200
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": "N/A",
+            "built_in_tools": true,
+            "built_in_tools_list": [
+              "web_search",
+              "code_interpreter",
+              "visit_website",
+              "browser_automation",
+              "wolfram_alpha"
+            ],
+            "note": "Compound systems only support built-in tools. Local and remote MCP not supported."
+          },
+          "json_mode": true,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": true,
+          "batch": false,
+          "flex_processing": false,
+          "executed_tools_response": true
+        },
+        "configuration": {
+          "compound_custom.tools.enabled_tools": "Array of tool identifiers to restrict which built-in tools are available. Values: web_search, code_interpreter, visit_website, browser_automation, wolfram_alpha"
+        }
+      },
+      {
+        "id": "groq/compound-mini",
+        "display_name": "Groq Compound Mini",
+        "provider": "Groq",
+        "category": "production_system",
+        "description": "Lighter agentic system. Single tool per request, ~3x lower latency than groq/compound.",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (agentic system)",
+        "speed_tps": 450,
+        "context_window": 131072,
+        "max_completion_tokens": 8192,
+        "max_file_size": null,
+        "pricing": {
+          "note": "Pricing passed through to underlying models and tools"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 250,
+            "tpm": 70000,
+            "tpd": null,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 200000,
+            "rpm": 200
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": "N/A",
+            "built_in_tools": true,
+            "built_in_tools_list": [
+              "web_search",
+              "code_interpreter",
+              "visit_website",
+              "browser_automation",
+              "wolfram_alpha"
+            ],
+            "note": "Single tool per request. Compound systems only support built-in tools."
+          },
+          "json_mode": true,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": true,
+          "batch": false,
+          "flex_processing": false,
+          "executed_tools_response": true
+        }
+      }
+    ],
+
+    "preview": [
+      {
+        "id": "canopylabs/orpheus-arabic-saudi",
+        "display_name": "Canopy Labs Orpheus Arabic Saudi",
+        "provider": "Canopy Labs",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["audio"]
+        },
+        "type": "text-to-speech",
+        "language": "Arabic (Saudi)",
+        "speed_tps": null,
+        "context_window": 4000,
+        "max_completion_tokens": 50000,
+        "max_file_size": null,
+        "pricing": {
+          "per_1m_characters": "$40.00"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 10,
+            "rpd": 100,
+            "tpm": 1200,
+            "tpd": 3600,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 50000,
+            "rpm": 250
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "canopylabs/orpheus-v1-english",
+        "display_name": "Canopy Labs Orpheus V1 English",
+        "provider": "Canopy Labs",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["audio"]
+        },
+        "type": "text-to-speech",
+        "language": "English",
+        "speed_tps": null,
+        "context_window": 4000,
+        "max_completion_tokens": 50000,
+        "max_file_size": null,
+        "pricing": {
+          "per_1m_characters": "$22.00"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 10,
+            "rpd": 100,
+            "tpm": 1200,
+            "tpd": 3600,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 50000,
+            "rpm": 250
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "display_name": "Meta Llama 4 Scout 17B 16E Instruct",
+        "provider": "Meta",
+        "category": "preview",
+        "modality": {
+          "input": ["text", "image", "file"],
+          "output": ["text"]
+        },
+        "type": "multimodal (vision + text)",
+        "speed_tps": 750,
+        "context_window": 131072,
+        "max_completion_tokens": 8192,
+        "max_file_size": "20 MB",
+        "pricing": {
+          "input_per_1m_tokens": "$0.11",
+          "output_per_1m_tokens": "$0.34"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 1000,
+            "tpm": 30000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 300000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": true,
+            "built_in_tools": false
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": false,
+          "vision": true,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "meta-llama/llama-prompt-guard-2-22m",
+        "display_name": "Meta Llama Prompt Guard 2 22M",
+        "provider": "Meta",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (content moderation / classification)",
+        "speed_tps": null,
+        "context_window": 512,
+        "max_completion_tokens": 512,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.03",
+          "output_per_1m_tokens": "$0.03"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 14400,
+            "tpm": 15000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 30000,
+            "rpm": 100
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false,
+          "content_moderation": true
+        }
+      },
+      {
+        "id": "meta-llama/llama-prompt-guard-2-86m",
+        "display_name": "Meta Llama Prompt Guard 2 86M",
+        "provider": "Meta",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (content moderation / classification)",
+        "speed_tps": null,
+        "context_window": 512,
+        "max_completion_tokens": 512,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.04",
+          "output_per_1m_tokens": "$0.04"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 14400,
+            "tpm": 15000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 30000,
+            "rpm": 100
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": false,
+            "remote_mcp": false,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": false,
+          "structured_outputs": false,
+          "reasoning": false,
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": false,
+          "batch": false,
+          "content_moderation": true
+        }
+      },
+      {
+        "id": "openai/gpt-oss-safeguard-20b",
+        "display_name": "OpenAI Safety GPT-OSS 20B",
+        "provider": "OpenAI",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (safety + reasoning)",
+        "speed_tps": 1000,
+        "context_window": 131072,
+        "max_completion_tokens": 65536,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.075",
+          "output_per_1m_tokens": "$0.30"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 1000,
+            "tpm": 8000,
+            "tpd": 200000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 150000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": false,
+            "built_in_tools": false
+          },
+          "json_mode": true,
+          "structured_outputs": false,
+          "reasoning": {
+            "supported": true,
+            "reasoning_effort": ["low", "medium", "high"],
+            "include_reasoning_param": true,
+            "reasoning_format_param": false,
+            "note": "Same reasoning behavior as gpt-oss-20b/120b"
+          },
+          "vision": false,
+          "prompt_caching": false,
+          "streaming": true,
+          "batch": false,
+          "flex_processing": false
+        }
+      },
+      {
+        "id": "qwen/qwen3-32b",
+        "display_name": "Alibaba Cloud Qwen3-32B",
+        "provider": "Alibaba Cloud",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (reasoning)",
+        "speed_tps": 400,
+        "context_window": 131072,
+        "max_completion_tokens": 40960,
+        "max_file_size": null,
+        "pricing": {
+          "input_per_1m_tokens": "$0.29",
+          "output_per_1m_tokens": "$0.59"
+        },
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 60,
+            "rpd": 1000,
+            "tpm": 6000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": {
+            "tpm": 300000,
+            "rpm": 1000
+          }
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": true,
+            "remote_mcp": true,
+            "parallel": true,
+            "built_in_tools": false
+          },
+          "json_mode": true,
+          "structured_outputs": true,
+          "reasoning": {
+            "supported": true,
+            "reasoning_effort": ["none", "default"],
+            "reasoning_format": ["raw", "parsed", "hidden"],
+            "include_reasoning_param": false,
+            "note": "none disables reasoning tokens entirely. Use reasoning_format to control output. raw returns <think> tags in content. parsed puts reasoning in message.reasoning field. hidden returns only final answer."
+          },
+          "vision": false,
+          "prompt_caching": true,
+          "streaming": true,
+          "batch": true,
+          "flex_processing": true
+        }
+      },
+      {
+        "id": "allam-2-7b",
+        "display_name": "Allam 2 7B",
+        "provider": "Unknown / Saudi",
+        "category": "preview",
+        "modality": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "type": "text-to-text (Arabic language model)",
+        "speed_tps": null,
+        "context_window": null,
+        "max_completion_tokens": null,
+        "max_file_size": null,
+        "pricing": null,
+        "rate_limits": {
+          "free_plan": {
+            "rpm": 30,
+            "rpd": 7000,
+            "tpm": 6000,
+            "tpd": 500000,
+            "ash": null,
+            "asd": null
+          },
+          "developer_plan": null
+        },
+        "capabilities": {
+          "tool_use": {
+            "local": null,
+            "remote_mcp": null,
+            "parallel": null,
+            "built_in_tools": false
+          },
+          "json_mode": null,
+          "structured_outputs": null,
+          "reasoning": false,
+          "vision": false
+        }
+      }
+    ]
+  },
+
+  "tool_use": {
+    "overview": "Groq supports three tool use patterns: built-in server-side tools, remote MCP server tools, and local function calling.",
+
+    "pattern_1_built_in_tools": {
+      "name": "Groq Built-In Tools",
+      "description": "Pre-built tools that execute entirely on Groq servers. Zero orchestration required. One API call returns the final answer.",
+      "supported_models": ["groq/compound", "groq/compound-mini", "openai/gpt-oss-20b", "openai/gpt-oss-120b"],
+      "how_to_use": {
+        "for_compound_models": {
+          "method": "No tools parameter needed by default. Model auto-selects tools. Optionally restrict via compound_custom.tools.enabled_tools array.",
+          "param_to_restrict": "compound_custom.tools.enabled_tools",
+          "example": {
+            "model": "groq/compound",
+            "messages": [{"role": "user", "content": "..."}],
+            "compound_custom": {
+              "tools": {
+                "enabled_tools": ["web_search", "code_interpreter"]
+              }
+            }
+          }
+        },
+        "for_gpt_oss_models": {
+          "method": "Pass tools array with type objects.",
+          "example": {
+            "model": "openai/gpt-oss-120b",
+            "messages": [{"role": "user", "content": "..."}],
+            "tools": [{"type": "browser_search"}, {"type": "code_interpreter"}]
+          }
+        }
+      },
+      "tools_by_model": {
+        "groq/compound": ["web_search", "code_interpreter", "visit_website", "browser_automation", "wolfram_alpha"],
+        "groq/compound-mini": ["web_search", "code_interpreter", "visit_website", "browser_automation", "wolfram_alpha"],
+        "openai/gpt-oss-20b": ["browser_search", "code_interpreter"],
+        "openai/gpt-oss-120b": ["browser_search", "code_interpreter"]
+      },
+      "tool_identifiers": {
+        "web_search": "Web search (Compound models only)",
+        "browser_search": "Browser-based search (GPT-OSS models only)",
+        "code_interpreter": "Secure Python code execution sandbox",
+        "visit_website": "Fetch and read webpage content (Compound only)",
+        "browser_automation": "Full browser automation (Compound only)",
+        "wolfram_alpha": "Wolfram Alpha computational queries (Compound only)"
+      },
+      "response_field": "executed_tools in response.choices[0].message.executed_tools"
+    },
+
+    "pattern_2_remote_mcp": {
+      "name": "Remote MCP (Model Context Protocol)",
+      "description": "Connect to external MCP servers via HTTPS. Groq handles tool discovery, routing, and execution server-side. Single API call via Responses API.",
+      "supported_models": [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "qwen/qwen3-32b",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "moonshotai/kimi-k2-instruct-0905"
+      ],
+      "api_endpoint": "POST https://api.groq.com/openai/v1/responses",
+      "preferred_api": "Responses API (also works with Chat Completions API)",
+      "mcp_tool_structure": {
+        "type": "mcp",
+        "server_label": "Friendly name for the server (used in responses)",
+        "server_url": "HTTPS URL of the MCP server",
+        "headers": "Authentication headers (securely handled, redacted from logs)",
+        "server_description": "Helps the model understand when to use these tools",
+        "require_approval": "'never' (auto-execute) or 'always' (human approval required)",
+        "allowed_tools": "Array of tool names to whitelist from the MCP server (null = all)"
+      },
+      "example_request": {
+        "model": "openai/gpt-oss-120b",
+        "input": "Your question here",
+        "tools": [
+          {
+            "type": "mcp",
+            "server_label": "my-server",
+            "server_url": "https://mcp.example.com",
+            "headers": {"Authorization": "Bearer <token>"},
+            "server_description": "Description of what this server provides",
+            "require_approval": "never",
+            "allowed_tools": null
+          }
+        ]
+      },
+      "multiple_servers": "Supported — pass multiple objects in the tools array.",
+      "security": {
+        "headers_redacted_from_logs": true,
+        "headers_only_sent_to_mcp_server": true,
+        "https_required": true
+      },
+      "approval_flow": {
+        "require_approval_always": "Groq returns mcp_approval_request object. You then send mcp_approval_response with approve: true/false.",
+        "require_approval_never": "Tool executes automatically."
+      },
+      "response_structure": [
+        "mcp_list_tools — discovered tools from the server",
+        "reasoning — model decision-making",
+        "mcp_call — tool execution with arguments and output",
+        "message — final assistant answer"
+      ],
+      "openai_compatibility": "Fully compatible. Change base_url, model, and api_key only.",
+      "known_public_mcp_servers": {
+        "huggingface": "https://huggingface.co/mcp",
+        "stripe": "https://mcp.stripe.com",
+        "firecrawl": "https://mcp.firecrawl.dev/<APIKEY>/v2/mcp",
+        "parallel_web_search": "https://mcp.parallel.ai/v1beta/search_mcp/",
+        "github": "https://mcp.github.com/v1",
+        "paypal": "https://www.paypal.ai/docs/tools/mcp-quickstart"
+      }
+    },
+
+    "pattern_3_local_tool_calling": {
+      "name": "Local Function Calling",
+      "description": "Define your own functions and tool schemas. Model returns structured tool_calls. Your code executes the function and sends results back. Multiple API calls per loop.",
+      "supported_models": "All models that support tool use (see capabilities per model)",
+      "tool_schema_format": {
+        "type": "function",
+        "function": {
+          "name": "function_name",
+          "description": "Description to help model decide when to use it",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "param_name": {"type": "string", "description": "..."}
+            },
+            "required": ["param_name"]
+          }
+        }
+      },
+      "flow": [
+        "1. Send request with tools array and messages",
+        "2. Model returns tool_calls array in response",
+        "3. Execute the function in your code",
+        "4. Append tool result message with tool_call_id matching the call id",
+        "5. Send updated conversation back to model",
+        "6. Model returns final answer or more tool_calls (repeat)"
+      ],
+      "tool_result_message_format": {
+        "role": "tool",
+        "tool_call_id": "must match id from assistant tool_calls",
+        "name": "function_name",
+        "content": "JSON string of results"
+      },
+      "tool_choice_options": {
+        "none": "Model will not call any tool",
+        "auto": "Model decides whether to call a tool (default when tools present)",
+        "required": "Model must call at least one tool",
+        "specific": "{\"type\": \"function\", \"function\": {\"name\": \"my_function\"}}"
+      },
+      "parallel_tool_calls": "Enabled by default (parallel_tool_calls: true). Models supporting parallel: llama-3.1-8b-instant, llama-3.3-70b-versatile, qwen/qwen3-32b, meta-llama/llama-4-scout-17b-16e-instruct."
+    },
+
+    "tool_use_capability_matrix": {
+      "openai/gpt-oss-20b":   {"local": true, "remote_mcp": true, "parallel": false, "built_in": true, "json_mode": true},
+      "openai/gpt-oss-120b":  {"local": true, "remote_mcp": true, "parallel": false, "built_in": true, "json_mode": true},
+      "openai/gpt-oss-safeguard-20b": {"local": true, "remote_mcp": true, "parallel": false, "built_in": false, "json_mode": true},
+      "qwen/qwen3-32b":       {"local": true, "remote_mcp": true, "parallel": true,  "built_in": false, "json_mode": true},
+      "meta-llama/llama-4-scout-17b-16e-instruct": {"local": true, "remote_mcp": true, "parallel": true, "built_in": false, "json_mode": true},
+      "llama-3.3-70b-versatile": {"local": true, "remote_mcp": true, "parallel": true, "built_in": false, "json_mode": true},
+      "llama-3.1-8b-instant": {"local": true, "remote_mcp": true, "parallel": true,  "built_in": false, "json_mode": true},
+      "groq/compound":        {"local": false, "remote_mcp": false, "parallel": "N/A", "built_in": true, "json_mode": true},
+      "groq/compound-mini":   {"local": false, "remote_mcp": false, "parallel": "N/A", "built_in": true, "json_mode": true}
+    }
+  },
+
+  "reasoning": {
+    "overview": "Reasoning models generate explicit reasoning chains (thinking tokens) before producing a final answer. Groq supports two approaches for controlling reasoning output.",
+    "supported_models": [
+      "openai/gpt-oss-20b",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-safeguard-20b",
+      "qwen/qwen3-32b"
+    ],
+    "reasoning_format_param": {
+      "applicable_to": ["qwen/qwen3-32b", "non-GPT-OSS models"],
+      "mutually_exclusive_with": "include_reasoning",
+      "values": {
+        "raw": "Reasoning included in main content inside <think>...</think> tags. Default when no JSON mode/tool use.",
+        "parsed": "Reasoning separated into dedicated message.reasoning field. Final answer in message.content.",
+        "hidden": "No reasoning returned. Model still reasons internally but output omitted."
+      },
+      "restriction": "Cannot use 'raw' with JSON mode or tool use enabled — returns 400 error. Use 'parsed' or 'hidden' instead."
+    },
+    "include_reasoning_param": {
+      "applicable_to": ["openai/gpt-oss-20b", "openai/gpt-oss-120b"],
+      "mutually_exclusive_with": "reasoning_format",
+      "values": {
+        "true": "Reasoning returned in message.reasoning field (default behavior)",
+        "false": "Reasoning excluded from response"
+      },
+      "note": "GPT-OSS models do not support reasoning_format. reasoning_format is not applicable to these models."
+    },
+    "reasoning_effort_param": {
+      "applicable_to": {
+        "qwen/qwen3-32b": {
+          "values": {
+            "none": "Disable reasoning entirely",
+            "default": "Enable reasoning (default)"
+          }
+        },
+        "openai/gpt-oss-20b": {
+          "values": {
+            "low": "Small number of reasoning tokens",
+            "medium": "Moderate reasoning tokens (default)",
+            "high": "Large number of reasoning tokens"
+          }
+        },
+        "openai/gpt-oss-120b": {
+          "values": {
+            "low": "Small number of reasoning tokens",
+            "medium": "Moderate reasoning tokens (default)",
+            "high": "Large number of reasoning tokens"
+          }
+        }
+      }
+    },
+    "recommended_settings": {
+      "temperature": "0.5 – 0.7 for reasoning models",
+      "top_p": 0.95,
+      "streaming": "Recommended for interactive tasks",
+      "system_prompts": "Avoid; include all instructions in user message (especially for DeepSeek-R1 style models)"
+    }
+  },
+
+  "api_parameters": {
+    "endpoint": "POST https://api.groq.com/openai/v1/chat/completions",
+    "parameters": {
+      "messages": {
+        "type": "array",
+        "required": true,
+        "description": "List of message objects comprising the conversation. Roles: system, user, assistant, tool."
+      },
+      "model": {
+        "type": "string",
+        "required": true,
+        "description": "Model ID to use. See models section."
+      },
+      "temperature": {
+        "type": "number",
+        "required": false,
+        "default": 1,
+        "range": "0 – 2",
+        "description": "Sampling temperature. Higher = more random. Lower = more deterministic. Do not combine with top_p."
+      },
+      "top_p": {
+        "type": "number",
+        "required": false,
+        "default": 1,
+        "range": "0 – 1",
+        "description": "Nucleus sampling. Considers tokens in top_p probability mass. Do not combine with temperature."
+      },
+      "max_completion_tokens": {
+        "type": "integer",
+        "required": false,
+        "description": "Max tokens in the response. Limited by model context length."
+      },
+      "max_tokens": {
+        "type": "integer",
+        "required": false,
+        "deprecated": true,
+        "description": "Deprecated. Use max_completion_tokens."
+      },
+      "stream": {
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "description": "Enable streaming. Returns server-sent events. Stream ends with data: [DONE]."
+      },
+      "stream_options": {
+        "type": "object",
+        "required": false,
+        "description": "Options for streaming. Only valid when stream: true."
+      },
+      "stop": {
+        "type": "string or array",
+        "required": false,
+        "description": "Up to 4 stop sequences. API stops generating when any is hit. Stop sequence not included in output."
+      },
+      "n": {
+        "type": "integer",
+        "required": false,
+        "default": 1,
+        "range": "1 – 1",
+        "description": "Number of completions to generate. Only n=1 supported currently."
+      },
+      "seed": {
+        "type": "integer",
+        "required": false,
+        "description": "For deterministic outputs. Best-effort only. Use system_fingerprint to track backend changes."
+      },
+      "response_format": {
+        "type": "object",
+        "required": false,
+        "description": "Output format. Options: {type: 'text'}, {type: 'json_object'}, or {type: 'json_schema', json_schema: {...}}. json_schema requires supported model.",
+        "values": {
+          "text": "Default text output",
+          "json_object": "Ensures valid JSON output (JSON mode)",
+          "json_schema": "Structured Outputs — model matches supplied JSON schema"
+        }
+      },
+      "tools": {
+        "type": "array",
+        "required": false,
+        "description": "List of tools the model may call. Supports: function (local tool definitions), browser_search/code_interpreter (GPT-OSS built-in), mcp (remote MCP server). Max 128 functions."
+      },
+      "tool_choice": {
+        "type": "string or object",
+        "required": false,
+        "description": "Controls tool selection behavior.",
+        "values": {
+          "none": "Model will not call any tool",
+          "auto": "Model picks message or tool (default if tools present)",
+          "required": "Model must call one or more tools",
+          "object": "{\"type\": \"function\", \"function\": {\"name\": \"my_function\"}} — force specific tool"
+        }
+      },
+      "parallel_tool_calls": {
+        "type": "boolean",
+        "required": false,
+        "default": true,
+        "description": "Enable parallel function calls. Not all models support parallel calls."
+      },
+      "disable_tool_validation": {
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "description": "If true, Groq returns tool calls without verifying they're in the request tools list. tool_choice=required/none still enforced."
+      },
+      "reasoning_format": {
+        "type": "string",
+        "required": false,
+        "values": ["hidden", "raw", "parsed"],
+        "mutually_exclusive_with": "include_reasoning",
+        "description": "Controls how reasoning tokens are output. Not supported on GPT-OSS models."
+      },
+      "reasoning_effort": {
+        "type": "string",
+        "required": false,
+        "values": ["none", "default", "low", "medium", "high"],
+        "description": "Controls reasoning effort level. none/default for Qwen3. low/medium/high for GPT-OSS 20B/120B."
+      },
+      "include_reasoning": {
+        "type": "boolean",
+        "required": false,
+        "mutually_exclusive_with": "reasoning_format",
+        "description": "Whether to include reasoning in response.choices[0].message.reasoning. GPT-OSS models only."
+      },
+      "service_tier": {
+        "type": "string",
+        "required": false,
+        "values": ["auto", "on_demand", "flex", "performance"],
+        "default": "on_demand",
+        "description": "Service tier for the request. auto = highest available tier. flex = fast fail mode. performance = premium tier."
+      },
+      "compound_custom": {
+        "type": "object",
+        "required": false,
+        "description": "Custom config for Compound models only.",
+        "properties": {
+          "tools.enabled_tools": "Array of built-in tool identifiers to whitelist: web_search, code_interpreter, visit_website, browser_automation, wolfram_alpha"
+        }
+      },
+      "documents": {
+        "type": "array",
+        "required": false,
+        "description": "Documents to provide as context. Model can reference and cite them."
+      },
+      "citation_options": {
+        "type": "string",
+        "required": false,
+        "default": "enabled",
+        "values": ["enabled", "disabled"],
+        "description": "Whether to include citations when model references documents or web search results."
+      },
+      "search_settings": {
+        "type": "object",
+        "required": false,
+        "description": "Web search settings for models using a web search tool.",
+        "properties": {
+          "include_domains": "Domains to restrict search to",
+          "exclude_domains": "Domains to exclude from search"
+        }
+      },
+      "user": {
+        "type": "string",
+        "required": false,
+        "description": "Unique end-user identifier for abuse monitoring."
+      },
+      "frequency_penalty": {
+        "type": "number",
+        "required": false,
+        "default": 0,
+        "range": "-2 – 2",
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED by any Groq model."
+      },
+      "presence_penalty": {
+        "type": "number",
+        "required": false,
+        "default": 0,
+        "range": "-2 – 2",
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED by any Groq model."
+      },
+      "logprobs": {
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED."
+      },
+      "top_logprobs": {
+        "type": "integer",
+        "required": false,
+        "range": "0 – 20",
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED. Requires logprobs: true."
+      },
+      "logit_bias": {
+        "type": "object",
+        "required": false,
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED."
+      },
+      "metadata": {
+        "type": "object",
+        "required": false,
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED."
+      },
+      "store": {
+        "type": "boolean",
+        "required": false,
+        "supported": false,
+        "description": "NOT CURRENTLY SUPPORTED."
+      }
+    }
+  },
+
+  "rate_limit_concepts": {
+    "units": {
+      "RPM": "Requests per minute",
+      "RPD": "Requests per day",
+      "TPM": "Tokens per minute",
+      "TPD": "Tokens per day",
+      "ASH": "Audio seconds per hour",
+      "ASD": "Audio seconds per day"
+    },
+    "notes": [
+      "Rate limits apply at the organization level, not per user",
+      "Cached tokens do not count toward rate limits",
+      "You can hit any limit type whichever threshold is reached first",
+      "Exceeding limits returns HTTP 429 Too Many Requests",
+      "retry-after header is only set when 429 is returned",
+      "Base limits shown are for Developer plan; Free plan limits are lower",
+      "Limits can be customized per project",
+      "Higher limits available via rate limit subscriptions or enterprise requests"
+    ],
+    "response_headers": {
+      "retry-after": "Seconds to wait (only on 429)",
+      "x-ratelimit-limit-requests": "RPD limit",
+      "x-ratelimit-limit-tokens": "TPM limit",
+      "x-ratelimit-remaining-requests": "Remaining RPD",
+      "x-ratelimit-remaining-tokens": "Remaining TPM",
+      "x-ratelimit-reset-requests": "Time until RPD resets",
+      "x-ratelimit-reset-tokens": "Time until TPM resets"
+    },
+    "spend_limits": {
+      "default_monthly_cap": "$500",
+      "resets": "1st of each month",
+      "alert_thresholds": ["50%", "75%", "90%"],
+      "requires": "Paid tier + organization owner permissions"
+    }
+  },
+
+  "service_tiers": {
+    "free": "No credit card required. Rate-limited. No batch/flex.",
+    "developer": "Higher rate limits. Access to Batch and Flex processing.",
+    "on_demand": "Default tier for API requests.",
+    "flex": "Lower priority, fast-fail mode. 50% cost reduction for batch workloads. 24h–7 day window.",
+    "performance": "Premium tier for high-throughput dedicated use cases.",
+    "batch": "Async workload submission. 50% cost reduction. Does not impact standard rate limits. 24h–7 day processing window."
+  }
+}

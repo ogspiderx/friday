@@ -12,11 +12,9 @@ import json
 from pathlib import Path
 from groq import Groq
 from config.settings import get_settings
-from rich.console import Console
+from core.ui import console
 
-console = Console()
-
-GENERATOR_SYSTEM_PROMPT = """You are the Skill Evolution Engine for FRIDAY.
+GENERATOR_SYSTEM_PROMPT = """You are the skill evolution engine for Friday.
 You take an Objective and a sequence of successful Bash Commands and mint a reusable Skill.
 Output exactly ONE JSON object with no prefix, no markdown block. Just the raw JSON.
 

@@ -15,11 +15,12 @@ from config.settings import get_settings
 
 
 MEMPALACE_FILE = "mempalace.json"
+_MAX_MEMORY_ENTRY_CHARS = 20_000
 
 
 class MemPalaceClient:
     """
-    Long-term memory storage for FRIDAY.
+    Long-term memory storage for Friday.
     
     Memory types:
         - fact      → learned facts about the user or system
@@ -64,6 +65,9 @@ class MemPalaceClient:
             memory_type: One of "fact", "outcome", "preference", "note".
             tags: Optional tags for retrieval.
         """
+        if len(content) > _MAX_MEMORY_ENTRY_CHARS:
+            content = content[:_MAX_MEMORY_ENTRY_CHARS] + "\n…(truncated)"
+
         entry = {
             "id": len(self._memories) + 1,
             "timestamp": datetime.now().isoformat(),

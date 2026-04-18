@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger("friday.critic")
 
-CRITIC_SYSTEM_PROMPT = """You are the Critic Layer for the FRIDAY AI Agent.
+CRITIC_SYSTEM_PROMPT = """You are the verification layer for Friday, a local CLI copilot.
 Your job is to review the output of an executed shell command or skill and determine if the user's implicit or explicit goal was successfully achieved.
 
 Rules:

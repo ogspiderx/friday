@@ -1,21 +1,22 @@
 """
-main.py — FRIDAY CLI entry point.
+main.py — Friday CLI entry point.
 
-Provides the interactive terminal loop with rich formatting,
-command history, and graceful lifecycle management.
+Interactive loop with Rich styling, builtins, and optional verbose diagnostics.
 """
 
-import sys
+from __future__ import annotations
+
+import argparse
 import logging
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
-from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
-from rich import box
 
-# ── Setup logging before anything else ────────────────────────────────────────
+from core.agent import FridayAgent
+from core.ui import BANNER, PROMPT, SUBTITLE, console, status_line
+
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "session.log"
@@ -24,93 +25,62 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(name)-20s | %(levelname)-7s | %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[
-        logging.FileHandler(LOG_FILE, mode="a"),
-    ],
+    handlers=[logging.FileHandler(LOG_FILE, mode="a")],
 )
 
 logger = logging.getLogger("friday.main")
 
-# ── Imports (after logging setup) ─────────────────────────────────────────────
-from core.agent import FridayAgent
-from config.settings import get_settings
-
-console = Console()
-
-
-# ── Banner ────────────────────────────────────────────────────────────────────
-
-BANNER = """[bold cyan]
- ███████╗██████╗ ██╗██████╗  █████╗ ██╗   ██╗
- ██╔════╝██╔══██╗██║██╔══██╗██╔══██╗╚██╗ ██╔╝
- █████╗  ██████╔╝██║██║  ██║███████║ ╚████╔╝ 
- ██╔══╝  ██╔══██╗██║██║  ██║██╔══██║  ╚██╔╝  
- ██║     ██║  ██║██║██████╔╝██║  ██║   ██║   
- ╚═╝     ╚═╝  ╚═╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝   
-[/bold cyan]"""
-
-SUBTITLE = "[dim]Local-first AI agent · Skills · Memory · Safe Shell[/dim]"
-
-
-# ── Built-in commands ─────────────────────────────────────────────────────────
-
 BUILTIN_COMMANDS = {
-    "exit":     "Exit FRIDAY",
-    "quit":     "Exit FRIDAY",
-    "status":   "Show agent state",
-    "skills":   "List available skills",
-    "memory":   "Show memory stats",
-    "safe":     "Toggle safe mode",
-    "clear":    "Clear screen",
-    "help":     "Show available commands",
-    "reload":   "Reload skills from disk",
+    "exit": "Leave Friday",
+    "quit": "Leave Friday",
+    "status": "Show agent state",
+    "skills": "List skills",
+    "memory": "Memory stats",
+    "safe": "Toggle safe mode",
+    "clear": "Clear the screen",
+    "help": "Built-in commands",
+    "reload": "Reload skills from disk",
 }
 
 
 def handle_builtin(command: str, agent: FridayAgent) -> bool:
-    """
-    Handle built-in CLI commands.
-    
-    Returns True if the command was handled, False otherwise.
-    """
     cmd = command.strip().lower()
 
     if cmd in ("exit", "quit"):
-        console.print("\n[bold cyan]  See you later. 🤙[/bold cyan]\n")
+        console.print("\n[friday.accent]Bye for now.[/friday.accent]\n")
         logger.info("Session ended by user")
         sys.exit(0)
 
     if cmd == "status":
         state = agent.state.to_dict()
-        lines = []
-        for k, v in state.items():
-            lines.append(f"  [cyan]{k}[/cyan]: {v}")
-        console.print(Panel("\n".join(lines), title="📊 Agent State", border_style="cyan"))
+        lines = [f"[friday.accent]{k}[/friday.accent] {v}" for k, v in state.items()]
+        console.print(Panel("\n".join(lines), title="Status", border_style="friday.info", padding=(0, 1)))
         return True
 
     if cmd == "skills":
         from skills.loader import load_skills
+
         skills = load_skills()
         if skills:
             for s in skills:
-                status = "✓" if s.has_runner else "✗"
-                console.print(f"  [{('green' if s.has_runner else 'red')}]{status}[/] [bold]{s.name}[/bold] — {s.description[:60]}")
-                if s.triggers:
-                    console.print(f"    [dim]triggers: {', '.join(s.triggers)}[/dim]")
+                mark = "✓" if s.has_runner else "·"
+                style = "friday.ok" if s.has_runner else "friday.dim"
+                console.print(f"  [{style}]{mark}[/{style}] [bold]{s.name}[/bold] — {s.description[:72]}")
         else:
-            console.print("  [dim]No skills found. Add skills to the skills/ directory.[/dim]")
+            console.print("  [friday.dim]No skills in skills/ yet.[/friday.dim]")
         return True
 
     if cmd == "memory":
-        console.print(f"  [cyan]Session entries:[/cyan] {agent.session.size}")
-        console.print(f"  [cyan]Long-term memories:[/cyan] {agent.mempalace.count}")
+        console.print(f"  [friday.dim]Session lines:[/friday.dim] {agent.session.size}")
+        console.print(f"  [friday.dim]Long-term:[/friday.dim] {agent.mempalace.count}")
         return True
 
     if cmd == "safe":
         agent.state.safe_mode = not agent.state.safe_mode
-        status = "ON" if agent.state.safe_mode else "OFF"
-        color = "green" if agent.state.safe_mode else "red"
-        console.print(f"  Safe mode: [{color}]{status}[/{color}]")
+        on = agent.state.safe_mode
+        st = "friday.ok" if on else "friday.err"
+        lab = "ON" if on else "OFF"
+        console.print(f"  Safe mode: [{st}]{lab}[/{st}]")
         return True
 
     if cmd == "clear":
@@ -119,91 +89,87 @@ def handle_builtin(command: str, agent: FridayAgent) -> bool:
 
     if cmd == "help":
         console.print()
-        for cmd_name, desc in BUILTIN_COMMANDS.items():
-            console.print(f"  [bold cyan]{cmd_name:10}[/bold cyan] {desc}")
+        for name, desc in BUILTIN_COMMANDS.items():
+            console.print(f"  [friday.accent]{name:8}[/friday.accent] {desc}")
         console.print()
         return True
 
     if cmd == "reload":
-        count = agent.reload_skills()
-        console.print(f"  [green]Reloaded {count} skill(s)[/green]")
+        n = agent.reload_skills()
+        console.print(f"  [friday.ok]Reloaded {n} skill(s).[/friday.ok]")
         return True
 
     return False
 
 
-# ── Main loop ─────────────────────────────────────────────────────────────────
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Friday — local CLI copilot")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Show intent, plans, and per-step diagnostics in the terminal",
+    )
+    args = parser.parse_args()
 
-def main():
-    """Main entry point for FRIDAY."""
     console.print(BANNER)
-    console.print(f"  {SUBTITLE}")
-    console.print(f"  [dim]Type [bold]help[/bold] for commands · [bold]exit[/bold] to quit[/dim]\n")
+    console.print(f"  {SUBTITLE}\n")
 
     try:
-        agent = FridayAgent()
         from core.scheduler import TaskScheduler
+
+        agent = FridayAgent(verbose=args.verbose)
         scheduler = TaskScheduler(agent)
-        
-        settings = get_settings()
-        console.print(f"  [green]✓[/green] Agent ready")
-        mr = settings.model_router
-        console.print(
-            f"  [green]✓[/green] Models: [dim]fast={mr.fast_model} · strong={mr.strong_model} · "
-            f"reason={mr.reason_model} · reason_deep={mr.reason_deep_model}[/dim]"
-        )
-        
+
+        from config.settings import get_settings
         from skills.loader import load_skills
-        skill_count = len(load_skills())
-        console.print(f"  [green]✓[/green] Skills: {skill_count} loaded")
-        console.print(f"  [green]✓[/green] Memory: {agent.mempalace.count} long-term entries")
-        console.print(f"  [green]✓[/green] Safe mode: {'ON' if agent.state.safe_mode else 'OFF'}")
+
+        settings = get_settings()
+        mr = settings.model_router
+        status_line("Ready", "Friday is here", ok=True)
+        status_line("Models", f"{mr.fast_model} · {mr.strong_model} · {mr.reason_model}", ok=True)
+        status_line("Skills", f"{len(load_skills())} loaded", ok=True)
+        status_line("Memory", f"{agent.mempalace.count} saved notes", ok=True)
+        status_line("Safe mode", "ON" if agent.state.safe_mode else "OFF", ok=agent.state.safe_mode)
+        if args.verbose:
+            status_line("Verbose", "diagnostics on", ok=True)
         console.print()
 
     except Exception as e:
-        console.print(f"\n  [bold red]✗ Failed to initialize:[/bold red] {e}")
-        logger.error(f"Init failed: {e}", exc_info=True)
+        console.print(f"\n[friday.err]Could not start:[/friday.err] {e}\n")
+        logger.error("Init failed: %s", e, exc_info=True)
         sys.exit(1)
 
-    logger.info(f"Session started at {datetime.now().isoformat()}")
+    logger.info("Session started at %s", datetime.now().isoformat())
 
-    # Interactive loop
     while True:
         try:
-            # Phase 15: Scheduler Tick
             scheduler.tick()
-            events = scheduler.pop_events()
-            for event in events:
+            for event in scheduler.pop_events():
                 if event["type"] == "task_completed":
-                    console.print(f"  [dim]🔔 Background Task Completed:[/dim] [green]{event.get('task_id')}[/green]")
+                    console.print(f"  [friday.dim]Background done:[/friday.dim] {event.get('task_id')}")
                 elif event["type"] == "task_failed":
-                    console.print(f"  [dim]🔔 Background Task Failed:[/dim] [red]{event.get('task_id')}[/red]")
-                    
-            user_input = console.input("[bold cyan]friday >[/bold cyan] ").strip()
+                    console.print(f"  [friday.warn]Background issue:[/friday.warn] {event.get('task_id')}")
 
+            user_input = console.input(PROMPT).strip()
             if not user_input:
                 continue
 
-            # Check built-in commands first
             if handle_builtin(user_input, agent):
                 continue
 
-            # Process through the agent pipeline
-            logger.info(f"Processing: {user_input}")
+            logger.info("Processing: %s", user_input)
             agent.process(user_input)
 
         except KeyboardInterrupt:
-            console.print("\n[dim]  Ctrl+C — type 'exit' to quit[/dim]")
+            console.print("\n[friday.dim]Ctrl+C — type exit to leave.[/friday.dim]")
             continue
-
         except EOFError:
-            console.print("\n[bold cyan]  See you later. 🤙[/bold cyan]\n")
+            console.print("\n[friday.accent]Later.[/friday.accent]\n")
             break
-
         except Exception as e:
-            console.print(f"\n  [red]Error: {e}[/red]")
-            logger.error(f"Unhandled error: {e}", exc_info=True)
-            continue
+            console.print(f"\n[friday.err]{e}[/friday.err]\n")
+            logger.error("Loop error: %s", e, exc_info=True)
 
 
 if __name__ == "__main__":

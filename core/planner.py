@@ -14,38 +14,43 @@ import json
 from groq import Groq
 from config.settings import get_settings
 
-PLANNER_SYSTEM_PROMPT = """You are the planning engine for FRIDAY, a CLI AI agent.
+PLANNER_SYSTEM_PROMPT = """You are the planning engine for Friday, a local CLI copilot.
 
 Given a user query and its classified intent, produce an execution plan.
 
 Rules:
 1. ALWAYS prefer using a skill if one could handle the task.
-2. If using the shell, you MUST output a STRUCTURED command object, NOT a raw shell string.
+2. For shell steps you MUST output STRUCTURED command objects (type + action + params). Never rely on raw shell strings.
 3. Keep plans SHORT — 1 to 3 steps maximum.
-4. If the user asks for factual information (time, disk space, files), generate a "shell" plan to find the answer, EVEN IF the intent was classified as "chat". 
-5. Only output a "chat" plan for casual conversation, greetings, or opinions where no system information is required.
-6. NEVER suggest dangerous commands (rm -rf /, sudo rm, etc.) without flagging them.
+4. If the user asks for factual information (time, disk space, files), emit a "shell" plan, even when intent was "chat".
+5. Only emit type "chat" for greetings, opinions, or chat with no machine facts required.
+6. Never suggest destructive commands (rm -rf /, sudo rm, disk writes to system paths).
+7. Persona self-updates: to change long-lived preferences, you may add a step with
+   {"type":"persona","action":"write"|"append","params":{"file":"SOUL.md"|"USER.md"|"AGENT.md"|"HEARTBEAT.md","content":"..."}}.
+   Only those four filenames. No secrets or API keys.
 
 Respond with ONLY valid JSON:
 {
   "type": "chat" | "skill" | "shell",
   "steps": [
     {
-      "action": "description of step", 
+      "action": "description of step",
       "skill": "skill name if applicable or null",
       "command": {
-         "type": "filesystem" | "git" | "system" | "package" | "shell",
-         "action": "action_name_or_base_binary",
-         "params": { 
-             "path": "target path if filesystem", 
-             "args": ["flags", "and", "arguments", "if system/git"],
-             "content": "file content if creating file"
+         "type": "filesystem" | "git" | "system" | "package" | "shell" | "persona",
+         "action": "verb or binary name",
+         "params": {
+             "path": "relative to cwd if filesystem",
+             "args": ["argv", "tokens", "only", "no", "shell", "metacharacters"],
+             "content": "text if creating a file",
+             "file": "one of SOUL.md USER.md AGENT.md HEARTBEAT.md for persona",
+             "append": false
          }
       }
     }
   ],
   "requires_shell": true | false,
-  "reasoning": "brief explanation of your plan"
+  "reasoning": "brief private note (not shown to user verbatim)"
 }"""
 
 
@@ -54,6 +59,11 @@ def create_plan(
     intent: dict,
     memory_context: str = "",
     cognitive_load: str = "medium",
+    *,
+    retry_context: str = "",
+    attempt: int = 1,
+    alternate_strategy: bool = False,
+    persona_context: str = "",
 ) -> dict:
     """
     Generate an execution plan from user query and classified intent.
@@ -83,6 +93,20 @@ def create_plan(
     
     if memory_context:
         context_parts.append(f"Relevant memory: {memory_context}")
+
+    if persona_context.strip():
+        context_parts.append("Persona / self-docs (may inform tone or constraints):\n" + persona_context.strip())
+
+    if retry_context.strip():
+        context_parts.append(f"Previous attempt #{attempt - 1} issues (fix these):\n{retry_context.strip()}")
+
+    if attempt > 1:
+        context_parts.append(f"This is planning attempt #{attempt}. Adjust commands based on the feedback above.")
+
+    if alternate_strategy:
+        context_parts.append(
+            "FINAL ATTEMPT: propose a substantially different approach (different tools, order, or assumptions)."
+        )
 
     user_message = "\n".join(context_parts)
 
@@ -129,6 +153,7 @@ def generate_chat_response(
     user_query: str,
     memory_context: str = "",
     cognitive_load: str = "medium",
+    persona_context: str = "",
 ) -> str:
     """
     Generate a conversational response for chat-type intents.
@@ -144,17 +169,18 @@ def generate_chat_response(
     client = Groq(api_key=settings.groq_api_key)
 
     system_msg = (
-        "You are FRIDAY, a sharp, capable AI assistant running as a local CLI agent. "
-        "You are helpful, concise, and slightly witty. You have access to the user's "
-        "shell and filesystem. Keep responses brief and actionable unless the user "
-        "wants a longer conversation. "
-        "When \"Environment Status\" includes machine-local facts (current time, OS, cwd), "
-        "treat that block as authoritative for this session. Never fabricate terminal output "
-        "or pretend a command ran unless it appears in the conversation. If the user needs "
-        "a fact that is not in Environment Status, say you can run a shell command to fetch it."
+        "You are Friday — a warm, capable CLI copilot with a feminine voice: direct, kind, "
+        "never condescending. You are not a lecturer: skip jargon, acronyms, and implementation "
+        "details unless the user explicitly wants depth. "
+        "When \"Environment Status\" lists machine-local facts (time, OS, cwd), treat them as "
+        "truth for this session. Never invent terminal output. If a fact is missing, offer to "
+        "check via shell in plain language."
     )
 
     messages = [{"role": "system", "content": system_msg}]
+
+    if persona_context.strip():
+        messages.append({"role": "system", "content": "Persona files:\n" + persona_context.strip()})
     
     if memory_context:
         messages.append({
@@ -194,6 +220,7 @@ def generate_task_response(
     execution_logs: str,
     memory_context: str = "",
     cognitive_load: str = "medium",
+    persona_context: str = "",
 ) -> str:
     """
     Generate a conversational response after executing a task (shell or skill).
@@ -211,14 +238,16 @@ def generate_task_response(
     client = Groq(api_key=settings.groq_api_key)
 
     system_msg = (
-        "You are FRIDAY, a sharp, capable AI assistant running as a local CLI agent. "
-        "You just executed a task for the user. Based on the provided execution logs and context, "
-        "tell the user what happened, if it was successful, or if there were any errors. "
-        "Be concise, actionable, and slightly witty. If an error occurred, explain what probably went wrong. "
-        "Do not just spit out the raw logs, synthesize them intelligently."
+        "You are Friday — same voice as in chat: warm, concise, human. You already ran something "
+        "for the user. Explain the outcome in everyday language: what changed, what they can do next. "
+        "Do not paste JSON, command objects, stack traces, or log dumps. If something failed, "
+        "say what it means in plain words and the gentlest next step—no panic tone."
     )
 
     messages = [{"role": "system", "content": system_msg}]
+
+    if persona_context.strip():
+        messages.append({"role": "system", "content": "Persona files:\n" + persona_context.strip()})
     
     if memory_context:
         messages.append({

@@ -14,7 +14,7 @@ import json
 from groq import Groq
 from config.settings import get_settings
 
-ROUTER_SYSTEM_PROMPT = """You are an intent classifier for a CLI AI agent named FRIDAY.
+ROUTER_SYSTEM_PROMPT = """You are an intent classifier for a CLI copilot named Friday.
 
 Classify the user's input into exactly ONE of these intents:
 - "chat" — casual conversation, greetings, questions about yourself, opinions

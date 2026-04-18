@@ -30,15 +30,19 @@ class DeterministicVerifier:
         params = command_spec.get("params", {})
         exit_code = execution_result.get("exit_code", -1)
         
-        work_dir = Path(default_cwd or os.getcwd())
-        
+        work_dir = Path(default_cwd or os.getcwd()).resolve()
+
         # --- 1 & 2. Filesystem & Directories ---
         if cmd_type == "filesystem":
             path_str = params.get("path")
             if not path_str:
                 return {"success": False, "reason": "No path provided in filesystem action", "confidence": 0.9}
-                
+
             target = (work_dir / path_str).resolve()
+            try:
+                target.relative_to(work_dir)
+            except ValueError:
+                return {"success": False, "reason": "Path outside workspace", "confidence": 1.0}
             
             if action in ("create_directory", "create_file"):
                 if target.exists():
@@ -58,6 +62,11 @@ class DeterministicVerifier:
                     return {"success": True, "reason": "File read successfully.", "confidence": 0.9}
                 else:
                     return {"success": False, "reason": "File read yielded no content or failed.", "confidence": 0.8}
+
+        elif cmd_type == "persona":
+            if exit_code == 0 and "error" not in execution_result.get("stderr", "").lower():
+                return {"success": True, "reason": "Persona file updated.", "confidence": 0.95}
+            return {"success": False, "reason": execution_result.get("stderr", "persona update failed"), "confidence": 0.9}
 
         # --- 3. Git Operations ---
         elif cmd_type == "git":

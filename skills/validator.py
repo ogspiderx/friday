@@ -8,9 +8,7 @@ semantically unique, and technically safe before saving them to disk.
 from safety.policy import SafetyPolicy
 from skills.loader import load_skills
 import re
-from rich.console import Console
-
-console = Console()
+from core.ui import console
 
 class SkillValidator:
     def __init__(self):

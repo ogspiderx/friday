@@ -19,9 +19,12 @@ class MemoryEntry:
     metadata: dict = field(default_factory=dict)
 
 
+_MAX_ENTRY_CHARS = 24_000
+
+
 class SessionMemory:
     """
-    Short-term memory for the current FRIDAY session.
+    Short-term memory for the current Friday session.
     
     Stores conversation turns and execution results.
     Provides context retrieval for planning.
@@ -33,6 +36,9 @@ class SessionMemory:
 
     def add(self, role: str, content: str, intent: str = "", metadata: dict | None = None):
         """Add a memory entry."""
+        if len(content) > _MAX_ENTRY_CHARS:
+            content = content[:_MAX_ENTRY_CHARS] + "\n…(truncated)"
+
         entry = MemoryEntry(
             timestamp=datetime.now().isoformat(),
             role=role,
@@ -62,7 +68,7 @@ class SessionMemory:
 
         parts = []
         for entry in recent:
-            prefix = "User" if entry.role == "user" else "FRIDAY"
+            prefix = "User" if entry.role == "user" else "Friday"
             parts.append(f"[{prefix}]: {entry.content[:200]}")
 
         return "\n".join(parts)

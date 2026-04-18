@@ -21,6 +21,11 @@ from core.state import AgentState
 # ── Dangerous patterns ───────────────────────────────────────────────────────
 
 DANGEROUS_PATTERNS = [
+    r"\$\(",  # command substitution
+    r"`[^`]+`",  # backtick subshells (simple heuristic)
+    r"\bcurl\b.*\|\s*(bash|sh|zsh|fish)",  # pipe to shell
+    r"\bwget\b.*\|\s*(bash|sh|zsh|fish)",
+    r"\b(bash|sh|zsh|fish)\s+-c\s+",
     r"\bsudo\b",
     r"\brm\s+(-[a-zA-Z]*f|-[a-zA-Z]*r|--force|--recursive)",
     r"\brm\s+-rf\b",
@@ -36,8 +41,6 @@ DANGEROUS_PATTERNS = [
     r">\s*/boot/",
     r">\s*/sys/",
     r">\s*/proc/",
-    r"\bcurl\b.*\|\s*(bash|sh|zsh)",         # pipe to shell
-    r"\bwget\b.*\|\s*(bash|sh|zsh)",
     r"\beval\b",
     r"\bexec\b",
     r"[;&|]\s*rm\b",
@@ -127,11 +130,11 @@ class SafetyPolicy:
             }
             
         # Hard length cap to prevent obfuscated payload injections
-        if len(command) > 300:
-             return {
+        if len(command) > 4000:
+            return {
                 "allowed": False,
                 "risk": "dangerous",
-                "reason": "Command exceeds maximum safe length limit (300 chars).",
+                "reason": "Command exceeds maximum safe length limit (4000 chars).",
                 "requires_confirmation": False,
             }
 
