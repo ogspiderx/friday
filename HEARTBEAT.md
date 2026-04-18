@@ -1,10 +1,7 @@
 # Heartbeat
 
-Lightweight session log. Friday appends meaningful milestones, context shifts, and "last time we..." notes here—not a debug dump. Used to maintain continuity across restarts.
+Session continuity log. Friday appends milestones and "last time we..." notes—not a debug dump.
 
-**Format:**
-```
-[YYYY-MM-DD HH:MM] <milestone or context note>
-```
+Format: `[YYYY-MM-DD HH:MM] note`
 
 ---
