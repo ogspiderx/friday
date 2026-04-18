@@ -162,3 +162,61 @@ def generate_chat_response(user_query: str, memory_context: str = "") -> str:
 
     except Exception as e:
         return f"[error] Failed to generate response: {e}"
+
+
+def generate_task_response(user_query: str, task_context: str, execution_logs: str, memory_context: str = "") -> str:
+    """
+    Generate a conversational response after executing a task (shell or skill).
+    
+    Args:
+        user_query: The user's original message.
+        task_context: A description of the plan or skill that was executed.
+        execution_logs: The output and results of the execution.
+        memory_context: Optional context from memory.
+    
+    Returns:
+        String response interpreting the results.
+    """
+    settings = get_settings()
+    client = Groq(api_key=settings.groq_api_key)
+
+    system_msg = (
+        "You are FRIDAY, a sharp, capable AI assistant running as a local CLI agent. "
+        "You just executed a task for the user. Based on the provided execution logs and context, "
+        "tell the user what happened, if it was successful, or if there were any errors. "
+        "Be concise, actionable, and slightly witty. If an error occurred, explain what probably went wrong. "
+        "Do not just spit out the raw logs, synthesize them intelligently."
+    )
+
+    messages = [{"role": "system", "content": system_msg}]
+    
+    if memory_context:
+        messages.append({
+            "role": "system",
+            "content": f"Relevant context from memory: {memory_context}"
+        })
+    
+    prompt = (
+        f"User query: {user_query}\n"
+        f"Task context: {task_context}\n"
+        f"Execution logs:\n{execution_logs}\n\n"
+        "Please provide your response to the user."
+    )
+    
+    messages.append({"role": "user", "content": prompt})
+
+    try:
+        response = client.chat.completions.create(
+            model=settings.get_model("chat"),
+            messages=messages,
+            temperature=0.5,
+            max_completion_tokens=1024,
+        )
+        
+        from core.budget import get_tracker
+        get_tracker().record_usage(response.usage)
+        
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        return f"[error] Failed to generate task response: {e}"

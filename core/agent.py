@@ -13,7 +13,7 @@ from rich.text import Text
 from rich.markdown import Markdown
 
 from core.router import classify_intent
-from core.planner import create_plan, generate_chat_response
+from core.planner import create_plan, generate_chat_response, generate_task_response
 from core.state import AgentState
 from memory.session import SessionMemory
 from memory.mempalace_client import MemPalaceClient
@@ -191,7 +191,11 @@ class FridayAgent:
                         tags=[matched_skill.name],
                     )
 
-                return output
+                response = generate_task_response(user_input, f"Executed skill: {matched_skill.name}", output, memory_context)
+                console.print()
+                console.print(Markdown(response))
+                console.print()
+                return response
             else:
                 console.print(f"  [yellow]Skill '{matched_skill.name}' has no runner (run.sh)[/yellow]")
 
@@ -207,7 +211,13 @@ class FridayAgent:
             return self._handle_chat(user_input, memory_context)
 
         if plan["type"] == "shell" or plan.get("requires_shell"):
-            return self._execute_shell_plan(plan, user_input)
+            shell_output = self._execute_shell_plan(plan, user_input)
+            plan_str = json.dumps(plan, indent=2)
+            response = generate_task_response(user_input, f"Executed shell plan:\n{plan_str}", shell_output, memory_context)
+            console.print()
+            console.print(Markdown(response))
+            console.print()
+            return response
 
         # Fallback to chat
         return self._handle_chat(user_input, memory_context)
